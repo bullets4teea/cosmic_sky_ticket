@@ -23,7 +23,8 @@
       "chat.cosmic.client.client.HighlightSearchMod",
       "chat.cosmic.client.client.MythicTrackerMod",
       "chat.cosmic.client.Trade2Client",
-      "chat.cosmic.client.client.UniversalGuiMover"
+      "chat.cosmic.client.client.UniversalGuiMover",
+      "chat.cosmic.client.client.NumberOverlayMod"
     ]
   },
   "mixins": [

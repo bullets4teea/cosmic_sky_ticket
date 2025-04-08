@@ -4,8 +4,8 @@
   "compatibilityLevel": "JAVA_17",
   "mixins": [],
   "client": [
-    "HandledScreenMixin"
-
+    "HandledScreenMixin",
+    "InventorySlotMixin"
   ],
   "injectors": {
     "defaultRequire": 1
