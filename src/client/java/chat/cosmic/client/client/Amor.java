@@ -50,7 +50,7 @@ public class Amor implements ClientModInitializer {
     private void onClientTick(MinecraftClient client) {
         if (client.player == null) return;
 
-        // Handle keybind toggle
+
         while (toggleKeybind.wasPressed()) {
             enabled = !enabled;
             client.player.sendMessage(Text.of(enabled ? "§aDurability alerts enabled" : "§cDurability alerts disabled"), true);
@@ -61,14 +61,14 @@ public class Amor implements ClientModInitializer {
         UUID playerUUID = client.player.getUuid();
         int threshold = playerThresholds.getOrDefault(playerUUID, 15);
 
-        // Armor slots: 0=Boots, 1=Leggings, 2=Chestplate, 3=Helmet
+
         for (int i = 0; i < 4; i++) {
             ItemStack armorStack = client.player.getInventory().armor.get(i);
             if (armorStack.isEmpty()) continue;
 
-            // Skip ONLY the item "minecraft:player_head" in the helmet slot
+
             if (i == 3 && isPlayerHead(armorStack)) {
-                continue; // Ignore ONLY player heads
+                continue;
             }
 
             int currentDurability = armorStack.getMaxDamage() - armorStack.getDamage();
@@ -85,9 +85,9 @@ public class Amor implements ClientModInitializer {
         }
     }
 
-    // Helper method to check if an item is "minecraft:player_head"
+
     private boolean isPlayerHead(ItemStack stack) {
-        // Get the item's identifier and check if it's "minecraft:player_head"
+
         Identifier itemId = Registries.ITEM.getId(stack.getItem());
         return itemId.toString().equals("minecraft:player_head");
     }
