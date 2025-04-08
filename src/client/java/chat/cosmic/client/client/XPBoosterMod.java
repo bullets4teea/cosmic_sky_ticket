@@ -18,7 +18,7 @@ public class XPBoosterMod implements ClientModInitializer {
     private static final Map<String, Integer> boosters = new HashMap<>();
     private static int tickCounter = 0;
 
-    // Texture identifiers
+
     private static final Identifier XP_BOTTLE_TEXTURE = new Identifier("xpbooster", "textures/gui/xp_bottle.png");
     private static final Identifier ISLAND_BOOSTER_TEXTURE = new Identifier("xpbooster", "textures/gui/island_booster.png");
     private static final Identifier HEAL_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/heal_cooldown.png");
@@ -26,21 +26,21 @@ public class XPBoosterMod implements ClientModInitializer {
     private static final Identifier FIX_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/fix_cooldown.png");
     private static final Identifier NEAR_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/near_cooldown.png");
 
-    // Display constants
+
     private static final int ICON_SIZE = 16;
     private static final int TEXT_COLOR = 0xFFFFFF;
     private static final int Y_OFFSET = 10;
     private static final float NAME_SCALE = 0.7f;
     private static final float TIMER_SCALE = 0.7f;
 
-    // HUD Containers
+
     private static final Map<String, UniversalGuiMover.HudContainer> boosterContainers = new HashMap<>();
 
     @Override
     public void onInitializeClient() {
         System.out.println("XP Booster Mod Initialized!");
 
-        // Initialize HUD containers
+
         boosterContainers.put("2x Island XP Booster", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
         boosterContainers.put("/heal", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
         boosterContainers.put("/feed", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
@@ -137,22 +137,22 @@ public class XPBoosterMod implements ClientModInitializer {
         int screenWidth = window.getScaledWidth();
         int screenHeight = window.getScaledHeight();
 
-        // Always show elements in movement mode, even if inactive
+
         boolean forceShow = UniversalGuiMover.isMovementModeActive();
 
-        // Get all containers that should be displayed
+
         Map<String, Integer> visibleBoosters = new HashMap<>(boosters);
         if (forceShow) {
             boosterContainers.keySet().forEach(key -> visibleBoosters.putIfAbsent(key, 0));
         }
 
-        // Calculate positions only if needed
+
         if (!visibleBoosters.isEmpty()) {
             int maxX = screenWidth - scaledIconSize - 5;
             int minY = 5;
             int maxY = screenHeight - (scaledIconSize * 2) - 5;
 
-            // Auto-center only when not in movement mode
+
             boolean needsCentering = !UniversalGuiMover.isMovementModeActive() &&
                     boosterContainers.values().stream().anyMatch(container -> container.x == 0);
 
@@ -171,13 +171,13 @@ public class XPBoosterMod implements ClientModInitializer {
                 }
             }
 
-            // Render all visible elements
+
             for (Map.Entry<String, Integer> entry : visibleBoosters.entrySet()) {
                 String boosterType = entry.getKey();
                 UniversalGuiMover.HudContainer container = boosterContainers.get(boosterType);
                 if (container == null) continue;
 
-                // Apply boundaries only when not moving
+
                 if (!UniversalGuiMover.isMovementModeActive()) {
                     container.x = Math.max(5, Math.min(container.x, maxX));
                     container.y = Math.max(minY, Math.min(container.y, maxY));
@@ -191,18 +191,18 @@ public class XPBoosterMod implements ClientModInitializer {
                 context.getMatrices().translate(container.x, container.y, 0);
                 context.getMatrices().scale(globalScale, globalScale, 1);
 
-                // Draw semi-transparent icon in movement mode
+
                 if (forceShow && timeLeft <= 0) {
                     context.setShaderColor(1, 1, 1, 0.4f);
                 }
 
-                // Draw icon
+
                 context.drawTexture(texture, 0, 0, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
 
-                // Reset transparency
+
                 context.setShaderColor(1, 1, 1, 1);
 
-                // Only draw text if active or in movement mode
+
                 if (timeLeft > 0 || forceShow) {
                     float textYOffset = ICON_SIZE + 2;
 

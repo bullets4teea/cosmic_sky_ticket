@@ -196,7 +196,7 @@ public class ChestTrackerMod implements ClientModInitializer {
 
         if (client == null || window == null || container == null) return;
 
-        // Update and validate position
+
         hudContainer.x = container.x;
         hudContainer.y = container.y;
 
@@ -209,7 +209,7 @@ public class ChestTrackerMod implements ClientModInitializer {
             needsBoundaryCheck = false;
         }
 
-        // Render elements
+
         float scale = UniversalGuiMover.getGlobalTextScale();
         context.getMatrices().push();
         context.getMatrices().translate(hudContainer.x, hudContainer.y, 0);
@@ -219,11 +219,11 @@ public class ChestTrackerMod implements ClientModInitializer {
         int yPos = 2;
         final int padding = 2;
 
-        // Draw timer
+
         context.drawTextWithShadow(renderer, "Time: " + getElapsedTime(), 2, yPos, 0xFFFFFF);
         yPos += renderer.fontHeight + (int) (padding / scale);
 
-        // Draw tiers
+
         if (isInAdventureDimension()) {
             for (String tier : TIERS) {
                 context.drawTextWithShadow(renderer, tier + ": " + chestCounts.get(tier),

@@ -9,7 +9,7 @@ import net.minecraft.util.hit.EntityHitResult;
 import net.minecraft.util.hit.HitResult;
 
 public class Trade2Client implements ClientModInitializer {
-    private boolean wereKeysPressed = false; // Track previous key state
+    private boolean wereKeysPressed = false;
 
     @Override
     public void onInitializeClient() {
@@ -42,10 +42,10 @@ public class Trade2Client implements ClientModInitializer {
     private void sendTradeRequest(String targetName) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player != null) {
-            // Send the /trade command to the server
+
             client.player.networkHandler.sendChatCommand("trade " + targetName);
 
-            // Optional: Feedback message (green text)
+
             client.player.sendMessage(Text.of("§aSent trade request to " + targetName), false);
         }
     }

@@ -9,22 +9,22 @@ import org.lwjgl.glfw.GLFW;
 
 public class HighlightSearchMod implements ClientModInitializer {
     public static KeyBinding TOGGLE_SEARCH_KEY;
-    public static boolean isSearchVisible = true; // Toggle state for search visibility
+    public static boolean isSearchVisible = true;
 
     @Override
     public void onInitializeClient() {
         // Register the key binding
         TOGGLE_SEARCH_KEY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "toggle search", // Translation key
-                InputUtil.Type.KEYSYM, // Type of key (keyboard key)
-                GLFW.GLFW_KEY_R, // Default key: R
-                "search bar " // Keybind category
+                "toggle search",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_R,
+                "search bar "
         ));
 
-        // Add tick listener to check for key presses
+
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (TOGGLE_SEARCH_KEY.wasPressed()) {
-                isSearchVisible = !isSearchVisible; // Toggle the visibility
+                isSearchVisible = !isSearchVisible;
             }
         });
     }
