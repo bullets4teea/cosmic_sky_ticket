@@ -106,7 +106,7 @@ public class angle implements ClientModInitializer {
     }
 
     private void registerCommands(CommandDispatcher<FabricClientCommandSource> dispatcher) {
-        dispatcher.register(literal("setdirection")
+        dispatcher.register(literal("setangle")
                 .then(argument("yaw", FloatArgumentType.floatArg())
                         .then(argument("pitch", FloatArgumentType.floatArg())
                                 .executes(context -> {
