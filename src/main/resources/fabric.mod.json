@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "id": "cosmic_v2",
+  "version": "${version}",
+  "name": "cosmic",
+  "description": "cosmic sky mod",
+  "authors": ["bullets4"],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/untitled20/icon.png",
+  "environment": "client",
+  "entrypoints": {
+
+    "main": [
+    ],
+
+    "client": [
+      "chat.cosmic.client.client.XPBoosterMod",
+      "chat.cosmic.client.client.Amor",
+      "chat.cosmic.client.angle",
+      "chat.cosmic.client.client.ChestTrackerMod",
+      "chat.cosmic.client.join",
+      "chat.cosmic.client.client.HighlightSearchMod",
+      "chat.cosmic.client.client.MythicTrackerMod",
+      "chat.cosmic.client.Trade2Client",
+      "chat.cosmic.client.client.UniversalGuiMover"
+    ]
+  },
+  "mixins": [
+    "cosmic.mixins.json",
+    {
+      "config": "cosmic.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
