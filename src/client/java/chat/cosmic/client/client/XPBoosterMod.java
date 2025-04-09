@@ -13,34 +13,43 @@ import net.minecraft.util.Identifier;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class XPBoosterMod implements ClientModInitializer {
     private static final Map<String, Integer> boosters = new HashMap<>();
+    private static final Map<String, Integer> chatTriggers = new HashMap<>();
     private static int tickCounter = 0;
 
-
+    // Texture identifiers
     private static final Identifier XP_BOTTLE_TEXTURE = new Identifier("xpbooster", "textures/gui/xp_bottle.png");
     private static final Identifier ISLAND_BOOSTER_TEXTURE = new Identifier("xpbooster", "textures/gui/island_booster.png");
     private static final Identifier HEAL_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/heal_cooldown.png");
     private static final Identifier FEED_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/feed_cooldown.png");
     private static final Identifier FIX_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/fix_cooldown.png");
     private static final Identifier NEAR_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/near_cooldown.png");
+    private static final Identifier CURSE_TEXTURE = new Identifier("xpbooster", "textures/gui/curse.png");
 
-
+    // Display constants
     private static final int ICON_SIZE = 16;
     private static final int TEXT_COLOR = 0xFFFFFF;
+    private static final int CURSE_COLOR = 0xFF5555;
     private static final int Y_OFFSET = 10;
     private static final float NAME_SCALE = 0.7f;
     private static final float TIMER_SCALE = 0.7f;
 
-
+    // HUD Containers
     private static final Map<String, UniversalGuiMover.HudContainer> boosterContainers = new HashMap<>();
+    private static final UniversalGuiMover.HudContainer curseContainer = new UniversalGuiMover.HudContainer(0, Y_OFFSET + 50, ICON_SIZE, ICON_SIZE, 1);
+
+    // Curse detection pattern
+    private static final Pattern CURSE_PATTERN = Pattern.compile("You have been cursed! You will be siphoned to 1 HP in (\\d+)s!");
 
     @Override
     public void onInitializeClient() {
         System.out.println("XP Booster Mod Initialized!");
 
-
+        // Initialize HUD containers
         boosterContainers.put("2x Island XP Booster", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
         boosterContainers.put("/heal", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
         boosterContainers.put("/feed", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
@@ -48,6 +57,7 @@ public class XPBoosterMod implements ClientModInitializer {
         boosterContainers.put("/near", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
 
         boosterContainers.forEach(UniversalGuiMover::trackHudContainer);
+        UniversalGuiMover.trackHudContainer("Curse", curseContainer);
 
         HudRenderCallback.EVENT.register(this::renderHud);
         ClientReceiveMessageEvents.GAME.register(this::handleGameMessage);
@@ -60,8 +70,13 @@ public class XPBoosterMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (++tickCounter >= 20) {
                 tickCounter = 0;
+                // Update boosters
                 boosters.replaceAll((k, v) -> v > 0 ? v - 1 : 0);
                 boosters.values().removeIf(v -> v <= 0);
+
+                // Update chat triggers
+                chatTriggers.replaceAll((k, v) -> v > 0 ? v - 1 : 0);
+                chatTriggers.values().removeIf(v -> v <= 0);
             }
         });
     }
@@ -69,8 +84,11 @@ public class XPBoosterMod implements ClientModInitializer {
     private void handleGameMessage(Text text, boolean overlay) {
         if (overlay) return;
 
-        String message = text.getString().toLowerCase();
-        if (message.contains("2x island xp booster") && message.contains("activated for")) {
+        String message = text.getString();
+        String lowerMessage = message.toLowerCase();
+
+        // Handle XP boosters
+        if (lowerMessage.contains("2x island xp booster") && lowerMessage.contains("activated for")) {
             String[] parts = message.split("activated for ");
             if (parts.length < 2) return;
 
@@ -79,6 +97,20 @@ public class XPBoosterMod implements ClientModInitializer {
 
             if (seconds > 0) {
                 boosters.put("2x Island XP Booster", seconds);
+            }
+        }
+        // Handle curse detection
+        else if (lowerMessage.contains("you have been cursed") && lowerMessage.contains("siphoned to 1 hp")) {
+            Matcher matcher = CURSE_PATTERN.matcher(message);
+            if (matcher.find()) {
+                try {
+                    int seconds = Integer.parseInt(matcher.group(1));
+                    if (seconds > 0) {
+                        chatTriggers.put("Curse", seconds);
+                    }
+                } catch (NumberFormatException e) {
+                    System.err.println("Failed to parse curse duration: " + message);
+                }
             }
         }
     }
@@ -137,22 +169,22 @@ public class XPBoosterMod implements ClientModInitializer {
         int screenWidth = window.getScaledWidth();
         int screenHeight = window.getScaledHeight();
 
-
+        // Always show elements in movement mode, even if inactive
         boolean forceShow = UniversalGuiMover.isMovementModeActive();
 
-
+        // Get all containers that should be displayed
         Map<String, Integer> visibleBoosters = new HashMap<>(boosters);
         if (forceShow) {
             boosterContainers.keySet().forEach(key -> visibleBoosters.putIfAbsent(key, 0));
         }
 
-
+        // Calculate positions only if needed
         if (!visibleBoosters.isEmpty()) {
             int maxX = screenWidth - scaledIconSize - 5;
             int minY = 5;
             int maxY = screenHeight - (scaledIconSize * 2) - 5;
 
-
+            // Auto-center only when not in movement mode
             boolean needsCentering = !UniversalGuiMover.isMovementModeActive() &&
                     boosterContainers.values().stream().anyMatch(container -> container.x == 0);
 
@@ -171,13 +203,13 @@ public class XPBoosterMod implements ClientModInitializer {
                 }
             }
 
-
+            // Render all visible elements
             for (Map.Entry<String, Integer> entry : visibleBoosters.entrySet()) {
                 String boosterType = entry.getKey();
                 UniversalGuiMover.HudContainer container = boosterContainers.get(boosterType);
                 if (container == null) continue;
 
-
+                // Apply boundaries only when not moving
                 if (!UniversalGuiMover.isMovementModeActive()) {
                     container.x = Math.max(5, Math.min(container.x, maxX));
                     container.y = Math.max(minY, Math.min(container.y, maxY));
@@ -191,18 +223,18 @@ public class XPBoosterMod implements ClientModInitializer {
                 context.getMatrices().translate(container.x, container.y, 0);
                 context.getMatrices().scale(globalScale, globalScale, 1);
 
-
+                // Draw semi-transparent icon in movement mode
                 if (forceShow && timeLeft <= 0) {
                     context.setShaderColor(1, 1, 1, 0.4f);
                 }
 
-
+                // Draw icon
                 context.drawTexture(texture, 0, 0, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
 
-
+                // Reset transparency
                 context.setShaderColor(1, 1, 1, 1);
 
-
+                // Only draw text if active or in movement mode
                 if (timeLeft > 0 || forceShow) {
                     float textYOffset = ICON_SIZE + 2;
 
@@ -225,6 +257,58 @@ public class XPBoosterMod implements ClientModInitializer {
 
                 context.getMatrices().pop();
             }
+        }
+
+        // Render curse countdown if active
+        if (chatTriggers.containsKey("Curse") || forceShow) {
+            int curseTime = chatTriggers.getOrDefault("Curse", 0);
+            String curseText = curseTime > 0 ? "Curse: " + curseTime + "s" : "Curse";
+
+            // Apply boundaries only when not moving
+            if (!UniversalGuiMover.isMovementModeActive()) {
+                curseContainer.x = Math.max(5, Math.min(curseContainer.x, screenWidth - scaledIconSize - 5));
+                curseContainer.y = Math.max(5, Math.min(curseContainer.y, screenHeight - (scaledIconSize * 2) - 5));
+            }
+
+            context.getMatrices().push();
+            context.getMatrices().translate(curseContainer.x, curseContainer.y, 0);
+            context.getMatrices().scale(globalScale, globalScale, 1);
+
+            // Draw semi-transparent icon in movement mode or when inactive
+            if (forceShow && curseTime <= 0) {
+                context.setShaderColor(1, 1, 1, 0.4f);
+            }
+
+            // Draw icon
+            context.drawTexture(CURSE_TEXTURE, 0, 0, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+
+            // Reset transparency
+            context.setShaderColor(1, 1, 1, 1);
+
+            // Only draw text if active or in movement mode
+            if (curseTime > 0 || forceShow) {
+                float textYOffset = ICON_SIZE + 2;
+
+                // Curse name
+                context.getMatrices().push();
+                context.getMatrices().translate(ICON_SIZE / 2f, textYOffset, 0);
+                context.getMatrices().scale(NAME_SCALE, NAME_SCALE, 1);
+                int nameWidth = client.textRenderer.getWidth("Curse");
+                context.drawText(client.textRenderer, "Curse", -nameWidth / 2, 0, CURSE_COLOR, true);
+                context.getMatrices().pop();
+
+                // Timer text (only show countdown when active)
+                if (curseTime > 0) {
+                    context.getMatrices().push();
+                    context.getMatrices().translate(ICON_SIZE / 2f, textYOffset + 10, 0);
+                    context.getMatrices().scale(TIMER_SCALE, TIMER_SCALE, 1);
+                    int timeWidth = client.textRenderer.getWidth(curseText);
+                    context.drawText(client.textRenderer, curseText, -timeWidth / 2, 0, CURSE_COLOR, true);
+                    context.getMatrices().pop();
+                }
+            }
+
+            context.getMatrices().pop();
         }
     }
 

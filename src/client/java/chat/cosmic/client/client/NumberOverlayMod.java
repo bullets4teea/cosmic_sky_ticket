@@ -9,6 +9,7 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.item.ItemStack;
 import net.minecraft.item.Items;
+import net.minecraft.text.Text;
 
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -79,7 +80,7 @@ public class NumberOverlayMod implements ClientModInitializer {
         int drawX = -textWidth / 2;
         int drawY = -textHeight / 2;
 
-
+        // Draw shadow
         for (int ox = -1; ox <= 1; ox++) {
             for (int oy = -1; oy <= 1; oy++) {
                 if (ox == 0 && oy == 0) continue;
@@ -87,17 +88,30 @@ public class NumberOverlayMod implements ClientModInitializer {
             }
         }
 
-
+        // Draw main text
         context.drawText(client.textRenderer, value, drawX, drawY, 0xFFFFFF, false);
         context.getMatrices().pop();
     }
 
     private static boolean isTargetItem(ItemStack stack) {
-        return !stack.isEmpty() && (stack.getItem() == Items.EXPERIENCE_BOTTLE || stack.getItem() == Items.PAPER);
+        if (stack.isEmpty()) return false;
+
+        // XP Bottles always work (no name check)
+        if (stack.getItem() == Items.EXPERIENCE_BOTTLE) {
+            return true;
+        }
+
+        // Money Notes only work if the name contains "Money Note"
+        if (stack.getItem() == Items.PAPER) {
+            Text name = stack.getName();
+            return name != null && name.getString().toLowerCase().contains("money note");
+        }
+
+        return false;
     }
 
     private static String getItemValue(ItemStack stack) {
-        if (stack.getItem() == Items.PAPER) {
+        if (stack.getItem() == Items.PAPER && isTargetItem(stack)) {
             return parseMoneyValue(stack);
         } else if (stack.getItem() == Items.EXPERIENCE_BOTTLE) {
             return parseXPValue(stack);
