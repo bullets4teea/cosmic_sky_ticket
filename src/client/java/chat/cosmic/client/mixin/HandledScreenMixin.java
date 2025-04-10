@@ -64,7 +64,7 @@ public abstract class HandledScreenMixin extends Screen {
 
     @Inject(method = "render", at = @At("TAIL"))
     private void onRender(DrawContext context, int mouseX, int mouseY, float delta, CallbackInfo ci) {
-        if (!HighlightSearchMod.isSearchVisible) return;
+        if (!HighlightSearchMod.isSearchVisible || this.searchField == null) return;
 
         HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
         this.searchField.setX(searchBarX);
@@ -128,8 +128,7 @@ public abstract class HandledScreenMixin extends Screen {
         if (button == 0) {
             HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
 
-            // Check if clicking on search bar
-            if (this.searchField.isMouseOver(mouseX, mouseY)) {
+            if (this.searchField != null && this.searchField.isMouseOver(mouseX, mouseY)) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastClickTime < 250) {
                     isGrayedOut = !isGrayedOut;
@@ -139,16 +138,17 @@ public abstract class HandledScreenMixin extends Screen {
                 isDragging = true;
                 dragOffsetX = (int) mouseX - searchBarX;
                 dragOffsetY = (int) mouseY - searchBarY;
-                return; // Do not unfocus search bar if clicking inside it
+                return;
             }
 
-            // Check if clicking a slot (inventory)
             for (Slot slot : screen.getScreenHandler().slots) {
                 int xPos = slot.x + this.x;
                 int yPos = slot.y + this.y;
 
                 if (mouseX >= xPos && mouseX <= xPos + 16 && mouseY >= yPos && mouseY <= yPos + 16) {
-                    this.searchField.setFocused(false); // Unfocus the search bar
+                    if (this.searchField != null) {
+                        this.searchField.setFocused(false);
+                    }
                     return;
                 }
             }
@@ -164,7 +164,7 @@ public abstract class HandledScreenMixin extends Screen {
 
     @Inject(method = "mouseDragged", at = @At("HEAD"), cancellable = true)
     private void onMouseDragged(double mouseX, double mouseY, int button, double deltaX, double deltaY, CallbackInfoReturnable<Boolean> cir) {
-        if (isDragging && button == 0) {
+        if (isDragging && button == 0 && this.searchField != null) {
             searchBarX = (int) mouseX - dragOffsetX;
             searchBarY = (int) mouseY - dragOffsetY;
             cir.setReturnValue(true);
@@ -173,7 +173,7 @@ public abstract class HandledScreenMixin extends Screen {
 
     @Inject(method = "keyPressed", at = @At("HEAD"), cancellable = true)
     private void onKeyPressed(int keyCode, int scanCode, int modifiers, CallbackInfoReturnable<Boolean> cir) {
-        if (!HighlightSearchMod.isSearchVisible) return;
+        if (!HighlightSearchMod.isSearchVisible || this.searchField == null) return;
 
         if (this.searchField.isFocused()) {
             if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
@@ -181,9 +181,9 @@ public abstract class HandledScreenMixin extends Screen {
                 cir.setReturnValue(true);
             }
             if (keyCode == GLFW.GLFW_KEY_E) {
-                cir.setReturnValue(true); // Prevent `E` from closing inventory
+                cir.setReturnValue(true);
             }
-            return; // Ensure other key inputs work normally
+            return;
         }
 
         if (keyCode == GLFW.GLFW_KEY_R) {
