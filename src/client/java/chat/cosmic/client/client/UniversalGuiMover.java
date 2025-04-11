@@ -191,8 +191,8 @@ public class UniversalGuiMover implements ClientModInitializer {
 
     public static class HudContainer {
         public int x, y;
-        public final int baseWidth;
-        public final int baseHeight;
+        public int baseWidth;
+        public int baseHeight;
         public final int lineCount;
 
         public HudContainer(int x, int y, int baseWidth, int baseHeight, int lineCount) {

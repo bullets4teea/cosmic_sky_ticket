@@ -125,10 +125,12 @@ public abstract class HandledScreenMixin extends Screen {
 
     @Inject(method = "mouseClicked", at = @At("HEAD"), cancellable = true)
     private void onMouseClicked(double mouseX, double mouseY, int button, CallbackInfoReturnable<Boolean> cir) {
+        if (this.searchField == null) return;
+
         if (button == 0) {
             HandledScreen<?> screen = (HandledScreen<?>) (Object) this;
 
-            if (this.searchField != null && this.searchField.isMouseOver(mouseX, mouseY)) {
+            if (this.searchField.isMouseOver(mouseX, mouseY)) {
                 long currentTime = System.currentTimeMillis();
                 if (currentTime - lastClickTime < 250) {
                     isGrayedOut = !isGrayedOut;
@@ -146,9 +148,7 @@ public abstract class HandledScreenMixin extends Screen {
                 int yPos = slot.y + this.y;
 
                 if (mouseX >= xPos && mouseX <= xPos + 16 && mouseY >= yPos && mouseY <= yPos + 16) {
-                    if (this.searchField != null) {
-                        this.searchField.setFocused(false);
-                    }
+                    this.searchField.setFocused(false);
                     return;
                 }
             }
@@ -190,10 +190,5 @@ public abstract class HandledScreenMixin extends Screen {
             HighlightSearchMod.isSearchVisible = !HighlightSearchMod.isSearchVisible;
             cir.setReturnValue(true);
         }
-    }
-
-    @Unique
-    public boolean isSearchFieldFocused() {
-        return this.searchField != null && this.searchField.isFocused();
     }
 }
