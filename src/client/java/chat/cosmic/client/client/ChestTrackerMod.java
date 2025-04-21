@@ -44,7 +44,7 @@ public class ChestTrackerMod implements ClientModInitializer {
     private static boolean isTimerRunning = false;
     private static boolean needsBoundaryCheck = true;
 
-    // HUD Container
+
     private static final UniversalGuiMover.HudContainer hudContainer =
             new UniversalGuiMover.HudContainer(10, 100, 120, 9, 7);
 

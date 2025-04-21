@@ -27,7 +27,7 @@ public class StatusEffectsTracker {
     private static final int CHAOTIC_MESSAGE_DURATION = 120;
 
     // Sound settings
-    private static final float SOUND_VOLUME = 20.0f;
+    private static final float SOUND_VOLUME = 1.0f; // Fixed volume (was 20.0f which is way too high)
     private static final float SOUND_PITCH = 2.0f;
 
     // Display constants
@@ -39,6 +39,9 @@ public class StatusEffectsTracker {
     // HUD Containers
     private static final UniversalGuiMover.HudContainer curseContainer = new UniversalGuiMover.HudContainer(0, 60, ICON_SIZE, ICON_SIZE, 1);
     private static final UniversalGuiMover.HudContainer chaoticZoneContainer = new UniversalGuiMover.HudContainer(0, 30, 100, 60, 2);
+
+    // Timer tracking
+    private static int tickCounter = 0;
 
     private static class ChaoticMessage {
         final String message;
@@ -59,7 +62,14 @@ public class StatusEffectsTracker {
         ClientReceiveMessageEvents.GAME.register(StatusEffectsTracker::handleGameMessage);
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            curseTimers.replaceAll((k, v) -> Math.max(v - 1, 0));
+            // Only decrement timers every 20 ticks (1 second)
+            tickCounter++;
+            if (tickCounter >= 20) {
+                tickCounter = 0;
+                curseTimers.replaceAll((k, v) -> Math.max(v - 1, 0));
+                // Remove curse if timer reaches 0
+                curseTimers.entrySet().removeIf(entry -> entry.getValue() <= 0);
+            }
             chaoticZoneMessages.removeIf(message -> --message.timer <= 0);
         });
 
@@ -80,6 +90,7 @@ public class StatusEffectsTracker {
                     int seconds = Integer.parseInt(matcher.group(1));
                     if (seconds > 0) {
                         curseTimers.put("Curse", seconds);
+                        tickCounter = 0; // Reset tick counter when new curse is applied
                     }
                 } catch (NumberFormatException e) {
                     System.err.println("Failed to parse curse duration: " + message);
@@ -112,7 +123,7 @@ public class StatusEffectsTracker {
         }
     }
 
-    private static void renderHud(DrawContext context, float tickDelta) {
+    public static void renderHud(DrawContext context, float tickDelta) {
         MinecraftClient client = MinecraftClient.getInstance();
         Window window = client.getWindow();
 
@@ -202,7 +213,7 @@ public class StatusEffectsTracker {
 
         if (curseTimers.containsKey("Curse") || forceShow) {
             int curseTime = curseTimers.getOrDefault("Curse", 0);
-            String curseText = curseTime > 0 ? "Curse: " + curseTime + "s" : "Curse";
+            String curseText = curseTime > 0 ? String.valueOf(curseTime) + "s" : "Curse";
 
             if (!UniversalGuiMover.isMovementModeActive()) {
                 curseContainer.x = Math.max(5, Math.min(

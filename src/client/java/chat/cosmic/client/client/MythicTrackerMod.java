@@ -105,7 +105,7 @@ public class MythicTrackerMod implements ClientModInitializer {
         context.getMatrices().translate(scaledX, scaledY, 0);
         context.getMatrices().scale(scale, scale, 1);
 
-        // Text lines
+
         context.drawText(client.textRenderer, Text.literal("§bFishing Tracker"), 2, 2, 0xFFFFFF, true);
 
         context.drawText(client.textRenderer, Text.literal("§cGodly: " + godlyCount), 2, 14, 0xFFFFFF, true);
