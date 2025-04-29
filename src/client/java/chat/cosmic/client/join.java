@@ -1,4 +1,5 @@
-package chat.cosmic.client;
+
+        package chat.cosmic.client;
 
 import chat.cosmic.client.client.UniversalGuiMover;
 import net.fabricmc.api.ClientModInitializer;
@@ -15,8 +16,8 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.PlayerListEntry;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.Window;
 import net.minecraft.text.Text;
+import net.minecraft.text.MutableText;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import org.lwjgl.glfw.GLFW;
@@ -26,7 +27,6 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -46,6 +46,12 @@ public class join implements ClientModInitializer {
     private static KeyBinding toggleGuiKey;
     private static final UniversalGuiMover.HudContainer hudContainer = new UniversalGuiMover.HudContainer(10, 10, 100, 40, 1);
     private static final File configFile = new File("config/untitled20_mod.properties");
+
+    // Track when the client is changing dimensions
+    private static boolean isChangingDimension = false;
+    private static long dimensionChangeTime = 0;
+    private static final long DIMENSION_CHANGE_COOLDOWN = 5000; // 5 seconds cooldown
+    private static String currentDimension = "";
 
     @Override
     public void onInitializeClient() {
@@ -151,6 +157,8 @@ public class join implements ClientModInitializer {
 
     private void onClientTick(MinecraftClient client) {
         if (client.player == null) return;
+
+        // Handle keybindings
         if (toggleNotificationsKey.wasPressed()) {
             NOTIFICATIONS_ENABLED = !NOTIFICATIONS_ENABLED;
             client.player.sendMessage(Text.of("Notifications " + (NOTIFICATIONS_ENABLED ? "enabled" : "disabled")), false);
@@ -161,59 +169,133 @@ public class join implements ClientModInitializer {
             client.player.sendMessage(Text.of("GUI " + (GUI_VISIBLE ? "enabled" : "disabled")), false);
             saveConfig();
         }
-        if (client.getNetworkHandler() != null) {
-            Set<String> currentPlayers = new HashSet<>();
-            for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
-                String username = entry.getProfile().getName().toLowerCase();
-                if (!isIgnored(username) && isValidPlayer(username)) currentPlayers.add(username);
-            }
-            for (String player : currentPlayers) {
-                if (!onlinePlayers.contains(player) && NOTIFICATIONS_ENABLED) {
-                    client.player.sendMessage(Text.of(player + " has joined the server!"), false);
-                }
-            }
-            for (String player : onlinePlayers) {
-                if (!currentPlayers.contains(player) && NOTIFICATIONS_ENABLED) {
-                    client.player.sendMessage(Text.of(player + " has left the server!"), false);
-                }
-            }
-            onlinePlayers = currentPlayers;
+
+        // Check if we're currently on a server
+        if (client.getNetworkHandler() == null) return;
+
+        // Check for dimension changes
+        String newDimension = "";
+        if (client.world != null && client.world.getRegistryKey() != null) {
+            newDimension = client.world.getRegistryKey().getValue().toString();
         }
+
+        if (!newDimension.equals(currentDimension) && !currentDimension.isEmpty()) {
+            // Dimension change detected
+            isChangingDimension = true;
+            dimensionChangeTime = System.currentTimeMillis();
+        }
+        currentDimension = newDimension;
+
+        // Reset dimension change flag after cooldown period
+        if (isChangingDimension && (System.currentTimeMillis() - dimensionChangeTime > DIMENSION_CHANGE_COOLDOWN)) {
+            isChangingDimension = false;
+            // Update player list to prevent false leave messages
+            if (client.getNetworkHandler() != null) {
+                Set<String> newPlayers = new HashSet<>();
+                for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
+                    String username = entry.getProfile().getName().toLowerCase();
+                    if (!isIgnored(username) && isValidPlayer(username) && !username.equalsIgnoreCase(client.player.getName().getString())) {
+                        newPlayers.add(username);
+                    }
+                }
+                onlinePlayers = newPlayers;
+            }
+        }
+
+        // Skip player list updates during dimension changes
+        if (isChangingDimension) return;
+
+        // Process player list
+        Set<String> currentPlayers = new HashSet<>();
+        boolean isFirstConnect = onlinePlayers.isEmpty();
+
+        for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
+            String username = entry.getProfile().getName().toLowerCase();
+            if (!isIgnored(username) && isValidPlayer(username) && !username.equalsIgnoreCase(client.player.getName().getString())) {
+                currentPlayers.add(username);
+            }
+        }
+
+        // Only process join/leave notifications if we're not in the initial connection
+        if (!isFirstConnect && NOTIFICATIONS_ENABLED) {
+            // Check for new players (joined)
+            for (String player : currentPlayers) {
+                if (!onlinePlayers.contains(player)) {
+                    client.player.sendMessage(Text.of("------------------------------------------"), false);
+                    client.player.sendMessage(Text.literal("§6§l" + player + " has joined your world"), false);
+                    client.player.sendMessage(Text.of("------------------------------------------"), false);
+                }
+            }
+
+            // Check for players who left
+            for (String player : onlinePlayers) {
+                if (!currentPlayers.contains(player)) {
+                    client.player.sendMessage(Text.of("------------------------------------------"), false);
+                    client.player.sendMessage(Text.literal("§c§l" + player + " has left your world"), false);
+                    client.player.sendMessage(Text.of("------------------------------------------"), false);
+                }
+            }
+        }
+
+        onlinePlayers = currentPlayers;
     }
 
     private void onHudRender(DrawContext context, float tickDelta) {
         if (GUI_VISIBLE && MinecraftClient.getInstance().player != null) {
+            MinecraftClient client = MinecraftClient.getInstance();
             UniversalGuiMover.HudContainer container = UniversalGuiMover.getHudContainer("playerListHud");
             if (container == null) return;
-            UniversalGuiMover.clampPosition(container, MinecraftClient.getInstance().getWindow());
+            UniversalGuiMover.clampPosition(container, client.getWindow());
 
             float scale = UniversalGuiMover.getGlobalTextScale();
             int lineHeight = 12;
             int maxPlayersPerColumn = 15;
             int columnWidth = 90;
-            int totalPlayers = onlinePlayers.size();
+
+            // Create a Set that includes all online players, filtered appropriately
+            Set<String> displayPlayers = new HashSet<>();
+            if (client.getNetworkHandler() != null) {
+                for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
+                    String username = entry.getProfile().getName().toLowerCase();
+                    if (!isIgnored(username) && isValidPlayer(username)) {
+                        displayPlayers.add(username);
+                    }
+                }
+            }
+
+            int totalPlayers = displayPlayers.size();
             int columns = (int) Math.ceil((double) totalPlayers / maxPlayersPerColumn);
 
+            // Draw background rectangle
+            context.fill(container.x, container.y, container.x + (columnWidth * columns),
+                    container.y + Math.min(totalPlayers, maxPlayersPerColumn) * lineHeight + 5, 0x80000000);
+
             context.getMatrices().push();
-            context.getMatrices().translate(container.x, container.y, 0);
+            context.getMatrices().translate(container.x + 3, container.y + 3, 0);
             context.getMatrices().scale(scale, scale, 1);
+
+            // First draw a title
+            context.drawText(client.textRenderer, "Players Online: " + totalPlayers, 0, -lineHeight, 0xFFFFFF, true);
+
+            // Display players from the direct player list rather than the cached onlinePlayers
+            List<String> sortedPlayers = new ArrayList<>(displayPlayers);
+            java.util.Collections.sort(sortedPlayers); // Sort alphabetically
 
             int playerIndex = 0;
             for (int col = 0; col < columns; col++) {
                 int columnX = col * columnWidth;
                 for (int row = 0; row < maxPlayersPerColumn; row++) {
-                    if (playerIndex >= totalPlayers) break;
-                    String player = onlinePlayers.toArray(new String[0])[playerIndex];
-                    if (!isIgnored(player) && isValidPlayer(player)) {
-                        String color = playerColors.getOrDefault(player.toLowerCase(), "default");
-                        int textColor = switch (color) {
-                            case "red" -> 0xFF0000;
-                            case "green" -> 0x00FF00;
-                            case "dark_blue" -> 0x336699;
-                            default -> 0xFFFFFF;
-                        };
-                        context.drawText(MinecraftClient.getInstance().textRenderer, player, columnX, row * lineHeight, textColor, true);
-                    }
+                    if (playerIndex >= sortedPlayers.size()) break;
+                    String player = sortedPlayers.get(playerIndex);
+
+                    String color = playerColors.getOrDefault(player.toLowerCase(), "default");
+                    int textColor = switch (color) {
+                        case "red" -> 0xFF0000;
+                        case "green" -> 0x00FF00;
+                        case "dark_blue" -> 0x336699;
+                        default -> 0xFFFFFF;
+                    };
+                    context.drawText(client.textRenderer, player, columnX, row * lineHeight, textColor, true);
                     playerIndex++;
                 }
             }
@@ -236,7 +318,6 @@ public class join implements ClientModInitializer {
         saveIgnoredPlayers();
         saveConfig();
     }
-
 
     private void saveIgnoredPlayers() {
         File ignoreFile = new File("config/ignore.txt");

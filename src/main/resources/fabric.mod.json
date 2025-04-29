@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "cosmic",
   "description": "cosmic sky mod",
-  "authors": ["bullets4"],
+  "authors": ["Bullets4"],
   "contact": {},
   "license": "All-Rights-Reserved",
   "icon": "assets/untitled20/icon.png",
@@ -12,6 +12,8 @@
   "entrypoints": {
 
     "main": [
+
+
     ],
 
     "client": [
@@ -25,6 +27,13 @@
       "chat.cosmic.client.Trade2Client",
       "chat.cosmic.client.client.UniversalGuiMover",
       "chat.cosmic.client.client.NumberOverlayMod"
+
+
+
+
+
+
+
     ]
   },
   "mixins": [
