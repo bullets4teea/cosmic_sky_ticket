@@ -10,7 +10,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.util.Window;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-
 import java.util.HashMap;
 import java.util.Map;
 
@@ -18,7 +17,6 @@ public class XPBoosterMod implements ClientModInitializer {
     private static final Map<String, Integer> boosters = new HashMap<>();
     private static int tickCounter = 0;
 
-    // Texture identifiers
     private static final Identifier XP_BOTTLE_TEXTURE = new Identifier("xpbooster", "textures/gui/xp_bottle.png");
     private static final Identifier ISLAND_BOOSTER_TEXTURE = new Identifier("xpbooster", "textures/gui/island_booster.png");
     private static final Identifier HEAL_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/heal_cooldown.png");
@@ -26,21 +24,20 @@ public class XPBoosterMod implements ClientModInitializer {
     private static final Identifier FIX_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/fix_cooldown.png");
     private static final Identifier NEAR_COOLDOWN_TEXTURE = new Identifier("xpbooster", "textures/gui/near_cooldown.png");
 
-    // Display constants
     private static final int ICON_SIZE = 16;
     private static final int TEXT_COLOR = 0xFFFFFF;
     private static final int Y_OFFSET = 10;
     private static final float NAME_SCALE = 0.7f;
     private static final float TIMER_SCALE = 0.7f;
 
-    // HUD Containers
-    private static final Map<String, UniversalGuiMover.HudContainer> boosterContainers = new HashMap<>();
+    static final Map<String, UniversalGuiMover.HudContainer> boosterContainers = new HashMap<>();
 
     @Override
     public void onInitializeClient() {
         System.out.println("XP Booster Mod Initialized!");
+        RankManager.initialize();
+        StatusEffectsTracker.initialize();
 
-        // Initialize HUD containers
         boosterContainers.put("2x Island XP Booster", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
         boosterContainers.put("/heal", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
         boosterContainers.put("/feed", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
@@ -48,10 +45,6 @@ public class XPBoosterMod implements ClientModInitializer {
         boosterContainers.put("/near", new UniversalGuiMover.HudContainer(0, Y_OFFSET, ICON_SIZE, ICON_SIZE, 1));
 
         boosterContainers.forEach(UniversalGuiMover::trackHudContainer);
-
-        // Initialize the StatusEffectsTracker
-        StatusEffectsTracker.initialize();
-
         HudRenderCallback.EVENT.register(this::renderHud);
         ClientReceiveMessageEvents.GAME.register(this::handleGameMessage);
 
@@ -63,7 +56,6 @@ public class XPBoosterMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (++tickCounter >= 20) {
                 tickCounter = 0;
-                // Update boosters
                 boosters.replaceAll((k, v) -> v > 0 ? v - 1 : 0);
                 boosters.values().removeIf(v -> v <= 0);
             }
@@ -116,18 +108,19 @@ public class XPBoosterMod implements ClientModInitializer {
     }
 
     private void onCommandSent(String command) {
-        String lowerCommand = command.toLowerCase();
+        String[] parts = command.toLowerCase().split(" ");
+        String baseCommand = parts[0];
 
-        if (lowerCommand.equals("fix") && !boosters.containsKey("/fix")) {
-            boosters.put("/fix", 120);
-        } else if (lowerCommand.equals("heal") && !boosters.containsKey("/heal")) {
-            boosters.put("/heal", 300);
-        } else if ((lowerCommand.equals("feed") || lowerCommand.equals("eat")) && !boosters.containsKey("/feed")) {
-            boosters.put("/feed", 300);
-        } else if (lowerCommand.equals("fix all") && !boosters.containsKey("/fix")) {
-            boosters.put("/fix", 120);
-        } else if (lowerCommand.equals("near") && !boosters.containsKey("/near")) {
-            boosters.put("/near", 30);
+        if (baseCommand.equals("fix") && parts.length > 1 && parts[1].equals("all")) {
+            baseCommand = "fix";
+        }
+
+        int cooldown = RankManager.getCooldown(baseCommand);
+        if (cooldown <= 0) return;
+
+        String boosterKey = "/" + baseCommand;
+        if (!boosters.containsKey(boosterKey)) {
+            boosters.put(boosterKey, cooldown);
         }
     }
 
