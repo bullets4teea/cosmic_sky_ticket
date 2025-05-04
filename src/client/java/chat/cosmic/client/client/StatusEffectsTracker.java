@@ -26,8 +26,14 @@ public class StatusEffectsTracker {
     private static final Pattern CHAOTIC_ZONE_PATTERN = Pattern.compile("(\\w+) has (entered|left) the Chaotic Zone!");
     private static final int CHAOTIC_MESSAGE_DURATION = 120;
 
+    // Combat tracking
+    private static int combatTimer = 0;
+    private static final Identifier COMBAT_TEXTURE = new Identifier("xpbooster", "textures/gui/combat.png");
+    private static final int COMBAT_COLOR = 0xFFAA00;
+    private static float previousHealth = 0.0f;
+
     // Sound settings
-    private static final float SOUND_VOLUME = 1.0f; // Fixed volume (was 20.0f which is way too high)
+    private static final float SOUND_VOLUME = 1.0f;
     private static final float SOUND_PITCH = 2.0f;
 
     // Display constants
@@ -39,6 +45,7 @@ public class StatusEffectsTracker {
     // HUD Containers
     private static final UniversalGuiMover.HudContainer curseContainer = new UniversalGuiMover.HudContainer(0, 60, ICON_SIZE, ICON_SIZE, 1);
     private static final UniversalGuiMover.HudContainer chaoticZoneContainer = new UniversalGuiMover.HudContainer(0, 30, 100, 60, 2);
+    private static final UniversalGuiMover.HudContainer combatContainer = new UniversalGuiMover.HudContainer(0, 90, ICON_SIZE, ICON_SIZE, 3);
 
     // Timer tracking
     private static int tickCounter = 0;
@@ -58,15 +65,26 @@ public class StatusEffectsTracker {
     public static void initialize() {
         UniversalGuiMover.trackHudContainer("Curse", curseContainer);
         UniversalGuiMover.trackHudContainer("ChaoticZone", chaoticZoneContainer);
+        UniversalGuiMover.trackHudContainer("Combat", combatContainer);
 
         ClientReceiveMessageEvents.GAME.register(StatusEffectsTracker::handleGameMessage);
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
+            // Track health changes for combat timer
+            if (client.player != null) {
+                float currentHealth = client.player.getHealth();
+                if (currentHealth < previousHealth) {
+                    combatTimer = 10; // Reset to 10 seconds on damage
+                }
+                previousHealth = currentHealth;
+            }
+
             // Only decrement timers every 20 ticks (1 second)
             tickCounter++;
             if (tickCounter >= 20) {
                 tickCounter = 0;
                 curseTimers.replaceAll((k, v) -> Math.max(v - 1, 0));
+                combatTimer = Math.max(combatTimer - 1, 0);
                 // Remove curse if timer reaches 0
                 curseTimers.entrySet().removeIf(entry -> entry.getValue() <= 0);
             }
@@ -131,6 +149,7 @@ public class StatusEffectsTracker {
 
         renderChaoticZoneMessages(context, client, window);
         renderCurseIcon(context, client, window);
+        renderCombatTimer(context, client, window);
     }
 
     private static void renderChaoticZoneMessages(DrawContext context, MinecraftClient client, Window window) {
@@ -253,6 +272,66 @@ public class StatusEffectsTracker {
                     context.getMatrices().scale(TIMER_SCALE, TIMER_SCALE, 1);
                     int timeWidth = client.textRenderer.getWidth(curseText);
                     context.drawText(client.textRenderer, curseText, -timeWidth / 2, 0, CURSE_COLOR, true);
+                    context.getMatrices().pop();
+                }
+            }
+
+            context.getMatrices().pop();
+        }
+    }
+
+    private static void renderCombatTimer(DrawContext context, MinecraftClient client, Window window) {
+        float globalScale = UniversalGuiMover.getGlobalTextScale();
+        int scaledIconSize = (int) (ICON_SIZE * globalScale);
+        boolean forceShow = UniversalGuiMover.isMovementModeActive();
+
+        if (combatTimer > 0 || forceShow) {
+            String combatText = combatTimer > 0 ? combatTimer + "s" : "Combat";
+
+            // Position handling
+            if (!UniversalGuiMover.isMovementModeActive()) {
+                combatContainer.x = Math.max(5, Math.min(
+                        combatContainer.x,
+                        window.getScaledWidth() - scaledIconSize - 5
+                ));
+                combatContainer.y = Math.max(5, Math.min(
+                        combatContainer.y,
+                        window.getScaledHeight() - (scaledIconSize * 3) - 5
+                ));
+            }
+
+            context.getMatrices().push();
+            context.getMatrices().translate(combatContainer.x, combatContainer.y, 0);
+            context.getMatrices().scale(globalScale, globalScale, 1);
+
+            // Semi-transparent if in movement mode without active timer
+            if (forceShow && combatTimer <= 0) {
+                context.setShaderColor(1, 1, 1, 0.4f);
+            }
+
+            // Draw combat icon
+            context.drawTexture(COMBAT_TEXTURE, 0, 0, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            context.setShaderColor(1, 1, 1, 1);
+
+            // Draw text labels
+            if (combatTimer > 0 || forceShow) {
+                float textYOffset = ICON_SIZE + 2;
+
+                // Combat label
+                context.getMatrices().push();
+                context.getMatrices().translate(ICON_SIZE / 2f, textYOffset, 0);
+                context.getMatrices().scale(NAME_SCALE, NAME_SCALE, 1);
+                int nameWidth = client.textRenderer.getWidth("Combat");
+                context.drawText(client.textRenderer, "Combat", -nameWidth / 2, 0, COMBAT_COLOR, true);
+                context.getMatrices().pop();
+
+                // Timer text
+                if (combatTimer > 0) {
+                    context.getMatrices().push();
+                    context.getMatrices().translate(ICON_SIZE / 2f, textYOffset + 10, 0);
+                    context.getMatrices().scale(TIMER_SCALE, TIMER_SCALE, 1);
+                    int timeWidth = client.textRenderer.getWidth(combatText);
+                    context.drawText(client.textRenderer, combatText, -timeWidth / 2, 0, COMBAT_COLOR, true);
                     context.getMatrices().pop();
                 }
             }

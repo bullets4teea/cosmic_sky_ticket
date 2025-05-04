@@ -53,10 +53,10 @@ public class MythicTrackerMod implements ClientModInitializer {
         UniversalGuiMover.trackHudContainer("mythicTrackerHud", hudContainer);
 
         toggleHudKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Toggle HUD",
+                "Fishing Hud Toggle",
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_R,
-                "Fish Tracker"
+                GLFW.GLFW_KEY_F13,
+                "Island"
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {

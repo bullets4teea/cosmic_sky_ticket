@@ -67,24 +67,24 @@ public class ChestTrackerMod implements ClientModInitializer {
 
     private void setupKeybinds() {
         resetKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "chest tracker reset",
+                "chest tracker reset and timer",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_R,
-                "chest tracker"
+                "adv"
         ));
 
         toggleHudKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "chest tracker togglehud",
                 InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_H,
-                "chest tracker"
+                GLFW.GLFW_KEY_V,
+                "adv"
         ));
 
         startPauseTimerKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "chest tracker start pause timer",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_T,
-                "chest tracker"
+                "adv"
         ));
     }
 
