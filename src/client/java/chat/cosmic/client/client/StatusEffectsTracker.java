@@ -3,8 +3,11 @@ package chat.cosmic.client.client;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
+import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.screen.ingame.GenericContainerScreen;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.Window;
 import net.minecraft.sound.SoundEvents;
@@ -32,6 +35,11 @@ public class StatusEffectsTracker {
     private static final int COMBAT_COLOR = 0xFFAA00;
     private static float previousHealth = 0.0f;
 
+    // Mule tracking
+    private static int muleTimer = 0;
+    private static boolean wasMuleScreenOpen = false;
+    private static final Identifier MULE_TEXTURE = new Identifier("xpbooster", "textures/gui/mule.png");
+
     // Sound settings
     private static final float SOUND_VOLUME = 1.0f;
     private static final float SOUND_PITCH = 2.0f;
@@ -46,6 +54,8 @@ public class StatusEffectsTracker {
     private static final UniversalGuiMover.HudContainer curseContainer = new UniversalGuiMover.HudContainer(0, 60, ICON_SIZE, ICON_SIZE, 1);
     private static final UniversalGuiMover.HudContainer chaoticZoneContainer = new UniversalGuiMover.HudContainer(0, 30, 100, 60, 2);
     private static final UniversalGuiMover.HudContainer combatContainer = new UniversalGuiMover.HudContainer(0, 90, ICON_SIZE, ICON_SIZE, 3);
+    private static final UniversalGuiMover.HudContainer muleContainer = new UniversalGuiMover.HudContainer(0, 120, ICON_SIZE, ICON_SIZE, 4);
+
 
     // Timer tracking
     private static int tickCounter = 0;
@@ -66,8 +76,16 @@ public class StatusEffectsTracker {
         UniversalGuiMover.trackHudContainer("Curse", curseContainer);
         UniversalGuiMover.trackHudContainer("ChaoticZone", chaoticZoneContainer);
         UniversalGuiMover.trackHudContainer("Combat", combatContainer);
+        UniversalGuiMover.trackHudContainer("Mule", muleContainer);
 
         ClientReceiveMessageEvents.GAME.register(StatusEffectsTracker::handleGameMessage);
+
+        // Track screen changes for mule GUI detection
+        ScreenEvents.AFTER_INIT.register((client, screen, scaledWidth, scaledHeight) -> {
+            if (isMuleScreen(screen)) {
+                wasMuleScreenOpen = true;
+            }
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             // Track health changes for combat timer
@@ -79,12 +97,24 @@ public class StatusEffectsTracker {
                 previousHealth = currentHealth;
             }
 
+            // Check if mule screen was closed
+            Screen currentScreen = client.currentScreen;
+            if (wasMuleScreenOpen && !isMuleScreen(currentScreen)) {
+                // Player left mule GUI, start 20-minute cooldown if they have access
+                if (RankManager.hasMuleAccess()) {
+                    muleTimer = 1200; // 20 minutes = 1200 seconds
+                    tickCounter = 0; // Reset tick counter
+                }
+                wasMuleScreenOpen = false;
+            }
+
             // Only decrement timers every 20 ticks (1 second)
             tickCounter++;
             if (tickCounter >= 20) {
                 tickCounter = 0;
                 curseTimers.replaceAll((k, v) -> Math.max(v - 1, 0));
                 combatTimer = Math.max(combatTimer - 1, 0);
+                muleTimer = Math.max(muleTimer - 1, 0);
                 // Remove curse if timer reaches 0
                 curseTimers.entrySet().removeIf(entry -> entry.getValue() <= 0);
             }
@@ -92,6 +122,22 @@ public class StatusEffectsTracker {
         });
 
         HudRenderCallback.EVENT.register(StatusEffectsTracker::renderHud);
+    }
+
+    public static void onPlayerAttack() {
+        combatTimer = 10;
+    }
+    private static boolean isMuleScreen(Screen screen) {
+        if (screen == null) return false;
+
+        // Check if it's a container screen (chest, shulker box, etc.)
+        if (screen instanceof GenericContainerScreen containerScreen) {
+            // Check specifically for "Prime Mule" in the title
+            String title = containerScreen.getTitle().getString();
+            return title.equals("Prime Mule");
+        }
+
+        return false;
     }
 
     private static void handleGameMessage(Text text, boolean overlay) {
@@ -150,6 +196,7 @@ public class StatusEffectsTracker {
         renderChaoticZoneMessages(context, client, window);
         renderCurseIcon(context, client, window);
         renderCombatTimer(context, client, window);
+        renderMuleTimer(context, client, window);
     }
 
     private static void renderChaoticZoneMessages(DrawContext context, MinecraftClient client, Window window) {
@@ -245,6 +292,7 @@ public class StatusEffectsTracker {
                 ));
             }
 
+
             context.getMatrices().push();
             context.getMatrices().translate(curseContainer.x, curseContainer.y, 0);
             context.getMatrices().scale(globalScale, globalScale, 1);
@@ -339,4 +387,74 @@ public class StatusEffectsTracker {
             context.getMatrices().pop();
         }
     }
+
+    private static void renderMuleTimer(DrawContext context, MinecraftClient client, Window window) {
+        float globalScale = UniversalGuiMover.getGlobalTextScale();
+        int scaledIconSize = (int) (ICON_SIZE * globalScale);
+        boolean forceShow = UniversalGuiMover.isMovementModeActive();
+        boolean hasAccess = RankManager.hasMuleAccess();
+
+        // Only show if player has Celestial rank access and there's an active timer, or if in movement mode
+        if ((hasAccess && muleTimer > 0) || forceShow) {
+            String muleText = muleTimer > 0 ? formatTime(muleTimer) : "Mule";
+
+            // Position handling
+            if (!UniversalGuiMover.isMovementModeActive()) {
+                muleContainer.x = Math.max(5, Math.min(
+                        muleContainer.x,
+                        window.getScaledWidth() - scaledIconSize - 5
+                ));
+                muleContainer.y = Math.max(5, Math.min(
+                        muleContainer.y,
+                        window.getScaledHeight() - (scaledIconSize * 4) - 5
+                ));
+            }
+
+            context.getMatrices().push();
+            context.getMatrices().translate(muleContainer.x, muleContainer.y, 0);
+            context.getMatrices().scale(globalScale, globalScale, 1);
+
+            // Semi-transparent if in movement mode without active timer or no access
+            if (forceShow && (muleTimer <= 0 || !hasAccess)) {
+                context.setShaderColor(1, 1, 1, 0.4f);
+            }
+
+            // Draw mule icon
+            context.drawTexture(MULE_TEXTURE, 0, 0, 0, 0, ICON_SIZE, ICON_SIZE, ICON_SIZE, ICON_SIZE);
+            context.setShaderColor(1, 1, 1, 1);
+
+            // Draw text labels
+            if (muleTimer > 0 || forceShow) {
+                float textYOffset = ICON_SIZE + 2;
+
+                // Mule label
+                context.getMatrices().push();
+                context.getMatrices().translate(ICON_SIZE / 2f, textYOffset, 0);
+                context.getMatrices().scale(NAME_SCALE, NAME_SCALE, 1);
+                int nameWidth = client.textRenderer.getWidth("Mule");
+                context.drawText(client.textRenderer, "Mule", -nameWidth / 2, 0, 0xFFFFFF, true);
+                context.getMatrices().pop();
+
+                // Timer text
+                if (muleTimer > 0) {
+                    context.getMatrices().push();
+                    context.getMatrices().translate(ICON_SIZE / 2f, textYOffset + 10, 0);
+                    context.getMatrices().scale(TIMER_SCALE, TIMER_SCALE, 1);
+                    int timeWidth = client.textRenderer.getWidth(muleText);
+                    context.drawText(client.textRenderer, muleText, -timeWidth / 2, 0, 0xFFFFFF, true);
+                    context.getMatrices().pop();
+                }
+            }
+
+            context.getMatrices().pop();
+        }
+    }
+
+    // Helper method to format time in MM:SS format
+    private static String formatTime(int seconds) {
+        int minutes = seconds / 60;
+        int remainingSeconds = seconds % 60;
+        return String.format("%d:%02d", minutes, remainingSeconds);
+    }
+
 }
