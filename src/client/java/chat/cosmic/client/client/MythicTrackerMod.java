@@ -30,7 +30,6 @@ public class MythicTrackerMod implements ClientModInitializer {
     private static boolean wasToggleKeyPressed = false;
     private static final String CONFIG_FILE = "config/mythictracker.properties";
 
-    // Sound setup
     public static final Identifier MYTHIC_SOUND_ID = new Identifier("mythictracker", "mythic_sound");
     public static final Identifier GODLY_SOUND_ID = new Identifier("mythictracker", "godly_sound");
     public static final Identifier HEROIC_SOUND_ID = new Identifier("mythictracker", "heroic_sound");
@@ -40,6 +39,8 @@ public class MythicTrackerMod implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        loadConfig();
+
         Registry.register(Registries.SOUND_EVENT, MYTHIC_SOUND_ID, MYTHIC_SOUND);
         Registry.register(Registries.SOUND_EVENT, GODLY_SOUND_ID, GODLY_SOUND);
         Registry.register(Registries.SOUND_EVENT, HEROIC_SOUND_ID, HEROIC_SOUND);
@@ -63,6 +64,7 @@ public class MythicTrackerMod implements ClientModInitializer {
             boolean isTogglePressed = toggleHudKey.isPressed();
             if (isTogglePressed && !wasToggleKeyPressed) {
                 isHudVisible = !isHudVisible;
+                saveConfig();
             }
             wasToggleKeyPressed = isTogglePressed;
         });
@@ -90,6 +92,32 @@ public class MythicTrackerMod implements ClientModInitializer {
         });
     }
 
+    private void loadConfig() {
+        File configFile = new File(CONFIG_FILE);
+        if (configFile.exists()) {
+            try (InputStream input = new FileInputStream(CONFIG_FILE)) {
+                Properties prop = new Properties();
+                prop.load(input);
+                isHudVisible = Boolean.parseBoolean(prop.getProperty("hudVisible", "true"));
+            } catch (IOException ex) {
+                System.err.println("Could not load config: " + ex.getMessage());
+            }
+        }
+    }
+
+    private void saveConfig() {
+        try {
+            new File(CONFIG_FILE).getParentFile().mkdirs();
+            try (OutputStream output = new FileOutputStream(CONFIG_FILE)) {
+                Properties prop = new Properties();
+                prop.setProperty("hudVisible", Boolean.toString(isHudVisible));
+                prop.store(output, "Mythic Tracker Config");
+            }
+        } catch (IOException ex) {
+            System.err.println("Could not save config: " + ex.getMessage());
+        }
+    }
+
     private void drawHud(DrawContext context) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
@@ -105,9 +133,7 @@ public class MythicTrackerMod implements ClientModInitializer {
         context.getMatrices().translate(scaledX, scaledY, 0);
         context.getMatrices().scale(scale, scale, 1);
 
-
         context.drawText(client.textRenderer, Text.literal("§bFishing Tracker"), 2, 2, 0xFFFFFF, true);
-
         context.drawText(client.textRenderer, Text.literal("§cGodly: " + godlyCount), 2, 14, 0xFFFFFF, true);
         context.drawText(client.textRenderer, Text.literal("§dHeroic: " + heroicCount), 2, 26, 0xFFFFFF, true);
         context.drawText(client.textRenderer, Text.literal("§5Mythic: " + mythicCount), 2, 38, 0xFFFFFF, true);

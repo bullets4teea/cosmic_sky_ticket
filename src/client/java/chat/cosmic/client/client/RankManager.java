@@ -1,12 +1,15 @@
 package chat.cosmic.client.client;
 
 import com.mojang.brigadier.arguments.StringArgumentType;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.text.*;
-import net.minecraft.util.Formatting;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.text.ClickEvent;
+import net.minecraft.text.HoverEvent;
+import net.minecraft.text.MutableText;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 
 import java.util.HashMap;
 import java.util.UUID;
@@ -82,7 +85,7 @@ public class RankManager {
             case "Comet" -> "/fix: 10m";
             case "Titan" -> "/fix: 5m, /feed/heal: 10m";
             case "Galactic" -> "/fix & /fix all: 2m, /near: 30s, /feed/heal: 5m";
-            case "Celestial" -> "/fix & /fix all: 90s, /near: 30s, /feed/heal: 3m";
+            case "Celestial" -> "/fix & /fix all: 90s, /near: 30s, /feed/heal: 3m, /mule: 20m";
             default -> "";
         };
     }
@@ -142,11 +145,9 @@ public class RankManager {
         boolean isFixAll = command.equalsIgnoreCase("fix all");
         String rank = getCurrentRank();
 
-
         if (isFixAll && !(rank.equals("Galactic") || rank.equals("Celestial"))) {
             return -1;
         }
-
 
         if (baseCommand.equals("fix")) {
             return switch (rank) {
@@ -158,6 +159,10 @@ public class RankManager {
             };
         }
 
+        // Handle mule command - Celestial rank only
+        if (baseCommand.equals("mule")) {
+            return rank.equals("Celestial") ? 1200 : -1; // 20 minutes = 1200 seconds
+        }
 
         return switch (rank) {
             case "Galactic" -> getGalacticCooldown(baseCommand);
@@ -198,5 +203,10 @@ public class RankManager {
     public static String getCurrentRankDisplay() {
         String rank = getCurrentRank();
         return rank.equals("Default") ? "Non-Rank" : rank;
+    }
+
+    // Method to check if player has access to mule command
+    public static boolean hasMuleAccess() {
+        return getCurrentRank().equals("Celestial");
     }
 }

@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "cosmic",
   "description": "cosmic sky mod",
-  "authors": ["bullets4"],
+  "authors": ["bullets4tea"],
   "contact": {},
   "license": "All-Rights-Reserved",
   "icon": "assets/untitled20/icon.png",
@@ -25,7 +25,8 @@
       "chat.cosmic.client.client.MythicTrackerMod",
       "chat.cosmic.client.Trade2Client",
       "chat.cosmic.client.client.UniversalGuiMover",
-      "chat.cosmic.client.client.NumberOverlayMod"
+      "chat.cosmic.client.client.NumberOverlayMod",
+      "chat.cosmic.client.client.NameTagSystem"
 
     ]
   },
