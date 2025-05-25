@@ -193,7 +193,7 @@ public class UniversalGuiMover implements ClientModInitializer {
         public int x, y;
         public int baseWidth;
         public int baseHeight;
-        public final int lineCount;
+        public int lineCount;
 
         public HudContainer(int x, int y, int baseWidth, int baseHeight, int lineCount) {
             this.x = x;

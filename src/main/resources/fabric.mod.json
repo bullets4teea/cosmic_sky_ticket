@@ -12,7 +12,8 @@
   "entrypoints": {
 
     "main": [
-      "chat.cosmic.client.client.DamageDisplayMod"
+      "chat.cosmic.client.client.DamageDisplayMod",
+      "chat.cosmic.client.client.TrinketMod"
 
     ],
 
@@ -26,7 +27,8 @@
       "chat.cosmic.client.Trade2Client",
       "chat.cosmic.client.client.UniversalGuiMover",
       "chat.cosmic.client.client.NumberOverlayMod",
-      "chat.cosmic.client.client.NameTagSystem"
+      "chat.cosmic.client.client.NameTagSystem",
+      "chat.cosmic.client.client.ArmorToggleMod"
 
     ]
   },
