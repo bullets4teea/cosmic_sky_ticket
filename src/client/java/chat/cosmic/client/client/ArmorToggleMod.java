@@ -3,8 +3,13 @@ package chat.cosmic.client.client;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.client.world.ClientWorld;
+import net.minecraft.entity.Entity;
+import net.minecraft.entity.LivingEntity;
+import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
@@ -26,8 +31,33 @@ public class ArmorToggleMod implements ClientModInitializer {
                 hideArmor = !hideArmor;
                 if (client.player != null) {
                     client.player.sendMessage(Text.literal("Armor visibility: " + (hideArmor ? "HIDDEN" : "SHOWN")), true);
+
+                    // Force refresh all living entities to update armor rendering
+                    refreshEntityRendering(client);
                 }
             }
         });
+    }
+
+    private void refreshEntityRendering(MinecraftClient client) {
+        if (client.world != null) {
+            ClientWorld world = client.world;
+
+
+            for (Entity entity : world.getEntities()) {
+                if (entity instanceof LivingEntity && !(entity instanceof PlayerEntity)) {
+
+                    if (client.getEntityRenderDispatcher().getRenderer(entity) != null) {
+
+                        entity.age = entity.age; // Trigger a minor update
+                    }
+                }
+            }
+
+
+            if (client.worldRenderer != null) {
+                client.worldRenderer.reload();
+            }
+        }
     }
 }
