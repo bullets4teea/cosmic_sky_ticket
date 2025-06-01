@@ -14,7 +14,7 @@ public class Trade2Client implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            // Check if BOTH sneak (shift) and use (right-click) keys are pressed
+
             boolean areKeysPressed = client.options.sneakKey.isPressed() && client.options.useKey.isPressed();
 
 
@@ -29,7 +29,7 @@ public class Trade2Client implements ClientModInitializer {
     private void handleShiftRightClick(MinecraftClient client) {
         if (client.player == null || client.crosshairTarget == null) return;
 
-        // Verify the player is looking at another player
+
         if (client.crosshairTarget.getType() == HitResult.Type.ENTITY) {
             EntityHitResult entityHit = (EntityHitResult) client.crosshairTarget;
             if (entityHit.getEntity() instanceof PlayerEntity) {

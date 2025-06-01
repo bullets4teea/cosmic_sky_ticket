@@ -13,7 +13,11 @@ import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.lwjgl.glfw.GLFW;
-
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -24,12 +28,24 @@ public class TrinketMod implements ModInitializer {
 
     private static final Pattern CHARGE_PATTERN = Pattern.compile(".*\\((\\d+)\\)");
     private static final String HUD_ID = "trinket_display";
+    private static final Path CONFIG_PATH = Paths.get("config", "trinket_display.properties");
     private UniversalGuiMover.HudContainer hudContainer;
     private boolean hudVisible = true;
     private KeyBinding toggleKey;
 
+    private static final List<String> ALLOWED_TRINKETS = List.of(
+            "Speed Trinket I",
+            "Strength Trinket I",
+            "Ender Pearl Trinket",
+            "Healing Trinket I",
+            "Healing Trinket II",
+            "Healing Trinket III"
+    );
+
     @Override
     public void onInitialize() {
+        loadConfig();
+
         HudRenderCallback.EVENT.register(this::renderTrinkets);
 
         hudContainer = new UniversalGuiMover.HudContainer(10, 10, 150, 12, 1);
@@ -47,8 +63,32 @@ public class TrinketMod implements ModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (toggleKey.wasPressed()) {
                 hudVisible = !hudVisible;
+                saveConfig();
             }
         });
+    }
+
+    private void loadConfig() {
+        try {
+            if (Files.exists(CONFIG_PATH)) {
+                Properties props = new Properties();
+                props.load(Files.newInputStream(CONFIG_PATH));
+                hudVisible = Boolean.parseBoolean(props.getProperty("visible", "true"));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveConfig() {
+        try {
+            Properties props = new Properties();
+            props.setProperty("visible", String.valueOf(hudVisible));
+            Files.createDirectories(CONFIG_PATH.getParent());
+            props.store(Files.newOutputStream(CONFIG_PATH), "Trinket Display Mod Configuration");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void renderTrinkets(DrawContext drawContext, float tickDelta) {
@@ -57,7 +97,7 @@ public class TrinketMod implements ModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
 
-        List<TrinketData> trinkets = getTrinkets(client.player.getInventory());
+        List<TrinketData> trinkets = getHotbarTrinkets(client.player.getInventory());
         if (trinkets.isEmpty()) return;
 
         hudContainer.lineCount = trinkets.size();
@@ -92,15 +132,19 @@ public class TrinketMod implements ModInitializer {
         drawContext.getMatrices().pop();
     }
 
-    private List<TrinketData> getTrinkets(PlayerInventory inv) {
+    private List<TrinketData> getHotbarTrinkets(PlayerInventory inv) {
         List<TrinketData> trinkets = new ArrayList<>();
 
-        for (int i = 0; i < inv.size(); i++) {
+
+        for (int i = 0; i < 9; i++) {
             ItemStack stack = inv.getStack(i);
             if (stack.isEmpty()) continue;
 
             String name = stack.getName().getString();
-            if (!name.toLowerCase().contains("trinket")) continue;
+
+            boolean isAllowed = ALLOWED_TRINKETS.stream()
+                    .anyMatch(allowed -> name.startsWith(allowed));
+            if (!isAllowed) continue;
 
             Matcher matcher = CHARGE_PATTERN.matcher(name);
             if (matcher.find()) {
@@ -110,13 +154,17 @@ public class TrinketMod implements ModInitializer {
             }
         }
 
-        // Case-insensitive sorting with priority: Health -> Speed -> Strength
         trinkets.sort(Comparator.comparingInt(t -> {
             String lowerName = t.name.toLowerCase();
-            if (lowerName.contains("health")) return 1;
+            if (lowerName.contains("healing")) return 1;
             if (lowerName.contains("speed")) return 2;
-            if (lowerName.contains("strength")) return 3;
-            return 4;
+            if (lowerName.contains(" ")) return 3;
+            if (lowerName.contains("pearl")) {
+                if (t.name.endsWith("III")) return 4;
+                if (t.name.endsWith("II")) return 5;
+                return 6;
+            }
+            return 7;
         }));
 
         return trinkets;
@@ -126,19 +174,27 @@ public class TrinketMod implements ModInitializer {
         String lowerName = trinket.name.toLowerCase();
         int charges = trinket.charges;
 
-        if (lowerName.contains("health")) {
-            if (charges > 25) return Formatting.GOLD;
+        if (lowerName.contains("healing")) {
+            if (charges > 50) return Formatting.GREEN;
+            if (charges >= 25) return Formatting.GOLD;
             return Formatting.RED;
         }
-        else if (lowerName.contains("speed") || lowerName.contains("strength")) {
-            if (charges > 7) return Formatting.GOLD;
+        else if (lowerName.contains("speed")) {
+            if (charges >= 6) return Formatting.GREEN;
+            if (charges >= 4) return Formatting.GOLD;
+            return Formatting.RED;
+        }
+        else if (lowerName.contains("strength")) {
+            if (charges >= 6) return Formatting.GREEN;
+            if (charges >= 4) return Formatting.GOLD;
+            return Formatting.RED;
+        }
+        else if (lowerName.contains("ender")) {
+            if (charges >= 7) return Formatting.GREEN;
+            if (charges >= 5) return Formatting.GOLD;
             return Formatting.RED;
         }
 
-        // Default color scheme for other trinkets
-        if (charges > 200) return Formatting.GREEN;
-        if (charges > 100) return Formatting.YELLOW;
-        if (charges > 50) return Formatting.GOLD;
         return Formatting.RED;
     }
 

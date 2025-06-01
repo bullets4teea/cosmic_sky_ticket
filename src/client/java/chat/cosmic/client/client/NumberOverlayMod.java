@@ -16,6 +16,7 @@ import java.util.regex.Pattern;
 
 @Environment(EnvType.CLIENT)
 public class NumberOverlayMod implements ClientModInitializer {
+
     private static final Pattern MONEY_PATTERN = Pattern.compile(
             "\\$?(\\d{1,3}(?:,\\d{3})*|\\d+)",
             Pattern.CASE_INSENSITIVE
@@ -96,12 +97,12 @@ public class NumberOverlayMod implements ClientModInitializer {
     private static boolean isTargetItem(ItemStack stack) {
         if (stack.isEmpty()) return false;
 
-        // XP Bottles always work (no name check)
+
         if (stack.getItem() == Items.EXPERIENCE_BOTTLE) {
             return true;
         }
 
-        // Money Notes only work if the name contains "Money Note"
+
         if (stack.getItem() == Items.PAPER) {
             Text name = stack.getName();
             return name != null && name.getString().toLowerCase().contains("money note");

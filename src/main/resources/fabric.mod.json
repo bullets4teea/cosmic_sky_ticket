@@ -4,7 +4,7 @@
   "version": "${version}",
   "name": "cosmic",
   "description": "cosmic sky mod",
-  "authors": ["bullets4"],
+  "authors": ["bullets4s"],
   "contact": {},
   "license": "All-Rights-Reserved",
   "icon": "assets/untitled20/icon.png",
@@ -13,7 +13,8 @@
 
     "main": [
       "chat.cosmic.client.client.DamageDisplayMod",
-      "chat.cosmic.client.client.TrinketMod"
+      "chat.cosmic.client.client.TrinketMod",
+      "chat.cosmic.client.client.CalculatorMod"
 
     ],
 

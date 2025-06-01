@@ -4,49 +4,63 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
-import net.fabricmc.fabric.api.client.screen.v1.ScreenEvents;
+import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import com.mojang.brigadier.context.CommandContext;
+import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.gui.screen.ingame.HandledScreen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.Window;
-import net.minecraft.nbt.NbtCompound;
-import net.minecraft.nbt.NbtIo;
+import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
+import net.minecraft.world.World;
 import org.lwjgl.glfw.GLFW;
 
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 public class ChestTrackerMod implements ClientModInitializer {
     private static final Map<String, Integer> chestCounts = new HashMap<>();
+    private static final Map<String, Integer> sysChestCounts = new HashMap<>();
     private static final Map<String, Integer> tierColors = Map.of(
             "Basic", 0xFFFFFF,
             "Elite", 0x54FCFC,
             "Legendary", 0xFFA500,
             "Godly", 0xFF0000,
             "Heroic", 0xFF69B4,
-            "Mythic", 0x800080
+            "Mythic", 0x800080,
+            "Tire", 0xC0C0C0
     );
+
     private static final String[] TIERS = {"Basic", "Elite", "Legendary", "Godly", "Heroic", "Mythic"};
+    private static final String[] SYS_TIERS = {"Basic", "Elite", "Legendary", "Godly", "Heroic", "Mythic", "Tire"};
+
+    private static final Pattern CHEST_PATTERN = Pattern.compile("\\* (Basic|Elite|Legendary|Godly|Heroic|Mythic) Chest dropped nearby! \\*");
+    private static final Pattern SYS_CHEST_PATTERN = Pattern.compile("\\* (Basic|Elite|Legendary|Godly|Heroic|Mythic) Chest dropped nearby!\\s+\\(System Override\\) \\*");
+    private static final Pattern TIRE_SYS_CHEST_PATTERN = Pattern.compile("\\* Tire Chest dropped nearby!\\s+\\(System Override\\) \\*");
+    private static final Pattern MAX_GEM_PATTERN = Pattern.compile("\\* \\+1 MAX GEM FOUND \\*");
 
     private static KeyBinding resetKey, toggleHudKey, startPauseTimerKey;
     private static boolean hudVisible = true;
     private static final Path CONFIG_PATH = Path.of("config/chesttracker_hud.dat");
-    private static final Set<String> countedChests = new HashSet<>();
     private static long startTime = 0;
     private static long pausedTime = 0;
     private static boolean isTimerRunning = false;
     private static boolean needsBoundaryCheck = true;
-
+    private static boolean showSysView = false;
+    private static long sysViewEndTime = 0;
+    private static int maxGemCount = 0;
 
     private static final UniversalGuiMover.HudContainer hudContainer =
-            new UniversalGuiMover.HudContainer(10, 100, 120, 9, 7);
+            new UniversalGuiMover.HudContainer(10, 100, 120, 9, 8);
 
     @Override
     public void onInitializeClient() {
@@ -55,36 +69,42 @@ public class ChestTrackerMod implements ClientModInitializer {
         loadHudPosition();
         UniversalGuiMover.trackHudContainer("chestTrackerHud", hudContainer);
 
-        ScreenEvents.AFTER_INIT.register(this::handleScreenInit);
         ClientTickEvents.END_CLIENT_TICK.register(this::handleClientTick);
         ClientTickEvents.START_CLIENT_TICK.register(this::handleBoundaryCheck);
         HudRenderCallback.EVENT.register(this::renderHud);
+
+        ClientReceiveMessageEvents.GAME.register(this::handleChatMessage);
+        registerCommands();
+    }
+
+    private void registerCommands() {
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            dispatcher.register(ClientCommandManager.literal("sys")
+                    .executes(this::handleSysCommand));
+        });
+    }
+
+    private int handleSysCommand(CommandContext<FabricClientCommandSource> context) {
+        showSysView = true;
+        sysViewEndTime = System.currentTimeMillis() + 10000;
+        context.getSource().sendFeedback(Text.literal("Showing System Override stats for 10 seconds"));
+        return 1;
     }
 
     private void initializeCounts() {
         for (String tier : TIERS) chestCounts.put(tier, 0);
+        for (String tier : SYS_TIERS) sysChestCounts.put(tier, 0);
     }
 
     private void setupKeybinds() {
         resetKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "chest tracker reset and timer",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_R,
-                "adv"
+                "chest tracker reset and timer", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_R, "adv"
         ));
-
         toggleHudKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "chest tracker togglehud",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_V,
-                "adv"
+                "chest tracker togglehud", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_V, "adv"
         ));
-
         startPauseTimerKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "chest tracker start pause timer",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_T,
-                "adv"
+                "chest tracker start pause timer", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_T, "adv"
         ));
     }
 
@@ -106,24 +126,20 @@ public class ChestTrackerMod implements ClientModInitializer {
         return Math.max(5, Math.min(y, window.getScaledHeight() - hudContainer.getScaledHeight() - 5));
     }
 
-    private void handleScreenInit(MinecraftClient client, Object screen, int width, int height) {
-        if (screen instanceof HandledScreen<?> handledScreen) {
-            countedChests.clear();
-            ScreenEvents.beforeRender((Screen) screen).register((s, ctx, mx, my, delta) ->
-                    handleChestOpen(handledScreen.getTitle().getString()));
-        }
-    }
-
     private void handleClientTick(MinecraftClient client) {
         if (resetKey.wasPressed()) handleReset();
         if (startPauseTimerKey.wasPressed()) handleTimerToggle();
         if (toggleHudKey.wasPressed()) toggleHudVisibility();
+
+        if (showSysView && System.currentTimeMillis() > sysViewEndTime) {
+            showSysView = false;
+        }
     }
 
     private void handleReset() {
         resetCounts();
         resetTimer();
-        sendClientMessage("Reset all chest counts and timer!");
+        sendClientMessage("Reset all chest counts, gems, and timer!");
     }
 
     private void handleTimerToggle() {
@@ -142,27 +158,55 @@ public class ChestTrackerMod implements ClientModInitializer {
         }
     }
 
-    private boolean isInAdventureDimension() {
+    private boolean isInTrackedDimension() {
         MinecraftClient client = MinecraftClient.getInstance();
-        return client.world != null &&
-                client.world.getRegistryKey().getValue().toString().contains("minecraft:adventure");
+        if (client.world == null) return false;
+        String dimension = client.world.getRegistryKey().getValue().toString();
+        return dimension.contains("minecraft:adventure") || dimension.contains("minecraft:the_nether");
     }
 
-    private void handleChestOpen(String title) {
-        if (!isInAdventureDimension()) return;
+    private boolean isInSkyblockWorld() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.world == null) return false;
+        String dimension = client.world.getRegistryKey().getValue().toString();
+        return dimension.contains("skyblock_world");
+    }
 
-        String cleanedTitle = title.replaceAll("§[0-9a-fk-or]", "").trim();
-        if (countedChests.add(cleanedTitle)) {
-            Arrays.stream(TIERS)
-                    .filter(cleanedTitle::contains)
-                    .findFirst()
-                    .ifPresent(tier -> chestCounts.put(tier, chestCounts.get(tier) + 1));
+    private boolean isHoldingPickaxe() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+        ItemStack heldItem = client.player.getMainHandStack();
+        return heldItem.getItem().toString().toLowerCase().contains("pickaxe");
+    }
+
+    private void handleChatMessage(Text message, boolean overlay) {
+        if (overlay) return;
+
+        String raw = message.getString();
+        String clean = raw.replaceAll("§[0-9a-fk-or]", "").trim();
+
+        Matcher matcher = CHEST_PATTERN.matcher(clean);
+        Matcher sysMatcher = SYS_CHEST_PATTERN.matcher(clean);
+        Matcher tireSysMatcher = TIRE_SYS_CHEST_PATTERN.matcher(clean);
+        Matcher maxGemMatcher = MAX_GEM_PATTERN.matcher(clean);
+
+        if (matcher.matches()) {
+            String tier = matcher.group(1);
+            chestCounts.put(tier, chestCounts.getOrDefault(tier, 0) + 1);
+        } else if (sysMatcher.matches()) {
+            String tier = sysMatcher.group(1);
+            sysChestCounts.put(tier, sysChestCounts.getOrDefault(tier, 0) + 1);
+        } else if (tireSysMatcher.matches()) {
+            sysChestCounts.put("Tire", sysChestCounts.getOrDefault("Tire", 0) + 1);
+        } else if (maxGemMatcher.matches() && isInSkyblockWorld() && isHoldingPickaxe()) {
+            maxGemCount++;
         }
     }
 
     private void resetCounts() {
-        chestCounts.replaceAll((k, v) -> 0);
-        countedChests.clear();
+        for (String tier : TIERS) chestCounts.put(tier, 0);
+        for (String tier : SYS_TIERS) sysChestCounts.put(tier, 0);
+        maxGemCount = 0;
     }
 
     private void resetTimer() {
@@ -196,19 +240,16 @@ public class ChestTrackerMod implements ClientModInitializer {
 
         if (client == null || window == null || container == null) return;
 
-
         hudContainer.x = container.x;
         hudContainer.y = container.y;
 
-        if (UniversalGuiMover.isDragging()) {
-            needsBoundaryCheck = true;
-        } else if (needsBoundaryCheck) {
+        if (UniversalGuiMover.isDragging()) needsBoundaryCheck = true;
+        else if (needsBoundaryCheck) {
             hudContainer.x = clampHudX(hudContainer.x, window);
             hudContainer.y = clampHudY(hudContainer.y, window);
             saveHudPosition();
             needsBoundaryCheck = false;
         }
-
 
         float scale = UniversalGuiMover.getGlobalTextScale();
         context.getMatrices().push();
@@ -219,17 +260,30 @@ public class ChestTrackerMod implements ClientModInitializer {
         int yPos = 2;
         final int padding = 2;
 
-
         context.drawTextWithShadow(renderer, "Time: " + getElapsedTime(), 2, yPos, 0xFFFFFF);
-        yPos += renderer.fontHeight + (int) (padding / scale);
+        yPos += renderer.fontHeight + (int)(padding / scale);
 
-
-        if (isInAdventureDimension()) {
-            for (String tier : TIERS) {
-                context.drawTextWithShadow(renderer, tier + ": " + chestCounts.get(tier),
-                        2, yPos, tierColors.getOrDefault(tier, 0xFFFFFF));
-                yPos += renderer.fontHeight + (int) (padding / scale);
+        if (showSysView) {
+            for (String tier : SYS_TIERS) {
+                int count = sysChestCounts.get(tier);
+                if (count > 0) {
+                    context.drawTextWithShadow(renderer, tier + " (Sys): " + count, 2, yPos, tierColors.getOrDefault(tier, 0xFFFFFF));
+                    yPos += renderer.fontHeight + (int)(padding / scale);
+                }
             }
+        } else if (isInTrackedDimension()) {
+            for (String tier : TIERS) {
+                context.drawTextWithShadow(renderer, tier + ": " + chestCounts.get(tier), 2, yPos, tierColors.getOrDefault(tier, 0xFFFFFF));
+                yPos += renderer.fontHeight + (int)(padding / scale);
+            }
+            int sysTotal = 0;
+            for (int count : sysChestCounts.values()) sysTotal += count;
+            context.drawTextWithShadow(renderer, "System Override: " + sysTotal, 2, yPos, 0x00FF00);
+            yPos += renderer.fontHeight + (int)(padding / scale);
+        }
+
+        if (isInSkyblockWorld() && isHoldingPickaxe()) {
+            context.drawTextWithShadow(renderer, "Max Gems: " + maxGemCount, 2, yPos, 0xFFD700);
         }
 
         context.getMatrices().pop();
@@ -237,18 +291,18 @@ public class ChestTrackerMod implements ClientModInitializer {
 
     private void saveHudPosition() {
         try {
-            NbtCompound nbt = new NbtCompound();
+            net.minecraft.nbt.NbtCompound nbt = new net.minecraft.nbt.NbtCompound();
             nbt.putInt("hudX", hudContainer.x);
             nbt.putInt("hudY", hudContainer.y);
             Files.createDirectories(CONFIG_PATH.getParent());
-            NbtIo.write(nbt, CONFIG_PATH);
+            net.minecraft.nbt.NbtIo.write(nbt, CONFIG_PATH);
         } catch (IOException ignored) {}
     }
 
     private void loadHudPosition() {
         try {
             if (Files.exists(CONFIG_PATH)) {
-                NbtCompound nbt = NbtIo.read(CONFIG_PATH);
+                net.minecraft.nbt.NbtCompound nbt = net.minecraft.nbt.NbtIo.read(CONFIG_PATH);
                 hudContainer.x = nbt.getInt("hudX");
                 hudContainer.y = nbt.getInt("hudY");
                 needsBoundaryCheck = true;

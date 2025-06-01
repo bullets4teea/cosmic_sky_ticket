@@ -83,9 +83,9 @@ public class RankManager {
     private static String getRankDescription(String rank) {
         return switch (rank) {
             case "Comet" -> "/fix: 10m";
-            case "Titan" -> "/fix: 5m, /feed/heal: 10m";
-            case "Galactic" -> "/fix & /fix all: 2m, /near: 30s, /feed/heal: 5m";
-            case "Celestial" -> "/fix & /fix all: 90s, /near: 30s, /feed/heal: 3m, /mule: 20m";
+            case "Titan" -> "/fix: 5m, /feed/eat/heal: 10m";
+            case "Galactic" -> "/fix & /fix all: 2m, /near: 30s, /feed/eat/heal: 5m";
+            case "Celestial" -> "/fix & /fix all: 90s, /near: 30s, /feed/eat/heal: 3m, /mule: 20m";
             default -> "";
         };
     }
@@ -145,6 +145,11 @@ public class RankManager {
         boolean isFixAll = command.equalsIgnoreCase("fix all");
         String rank = getCurrentRank();
 
+
+        if (baseCommand.equals("feed") || baseCommand.equals("eat") || baseCommand.equals("heal")) {
+            baseCommand = "feed";
+        }
+
         if (isFixAll && !(rank.equals("Galactic") || rank.equals("Celestial"))) {
             return -1;
         }
@@ -159,9 +164,9 @@ public class RankManager {
             };
         }
 
-        // Handle mule command - Celestial rank only
+
         if (baseCommand.equals("mule")) {
-            return rank.equals("Celestial") ? 1200 : -1; // 20 minutes = 1200 seconds
+            return rank.equals("Celestial") ? 1200 : -1;
         }
 
         return switch (rank) {
@@ -175,7 +180,7 @@ public class RankManager {
     private static int getGalacticCooldown(String command) {
         return switch (command) {
             case "near" -> 30;
-            case "feed", "heal" -> 300;
+            case "feed" -> 300;
             default -> -1;
         };
     }
@@ -183,14 +188,14 @@ public class RankManager {
     private static int getCelestialCooldown(String command) {
         return switch (command) {
             case "near" -> 30;
-            case "feed", "heal" -> 180;
+            case "feed" -> 180;
             default -> -1;
         };
     }
 
     private static int getTitanCooldown(String command) {
         return switch (command) {
-            case "feed", "heal" -> 600;
+            case "feed" -> 600;
             default -> -1;
         };
     }
@@ -205,7 +210,7 @@ public class RankManager {
         return rank.equals("Default") ? "Non-Rank" : rank;
     }
 
-    // Method to check if player has access to mule command
+
     public static boolean hasMuleAccess() {
         return getCurrentRank().equals("Celestial");
     }

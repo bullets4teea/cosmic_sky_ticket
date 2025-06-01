@@ -2,6 +2,7 @@ package chat.cosmic.client.client;
 
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
@@ -12,7 +13,6 @@ import net.minecraft.client.util.Window;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
-import java.io.*;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
@@ -27,16 +27,47 @@ public class UniversalGuiMover implements ClientModInitializer {
     private static float globalTextScale = 1.0f;
     private static KeyBinding scaleUpKey, scaleDownKey;
     private static boolean dragging;
+    private static int lastWindowWidth = 0;
+    private static int lastWindowHeight = 0;
 
     @Override
     public void onInitializeClient() {
-        // Loading moved to main mod class
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> saveGuiPositions());
         setupKeybinds();
         HudRenderCallback.EVENT.register(this::onHudRender);
+
+
+        ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
     }
 
-    // Add these new methods for property-based loading/saving
+    private void onClientTick(MinecraftClient client) {
+        if (client.world == null) return;
+
+        Window window = client.getWindow();
+        if (window == null) return;
+
+        int currentWidth = window.getScaledWidth();
+        int currentHeight = window.getScaledHeight();
+
+
+        if ((lastWindowWidth != currentWidth || lastWindowHeight != currentHeight) && !isMovementMode) {
+            if (lastWindowWidth > 0 && lastWindowHeight > 0) {
+                float widthRatio = (float) currentWidth / lastWindowWidth;
+                float heightRatio = (float) currentHeight / lastWindowHeight;
+
+                for (HudContainer container : hudContainers.values()) {
+                    container.x = (int) (container.x * widthRatio);
+                    container.y = (int) (container.y * heightRatio);
+                    clampPosition(container, window);
+                }
+            }
+
+            lastWindowWidth = currentWidth;
+            lastWindowHeight = currentHeight;
+        }
+    }
+
+
     public static void loadGuiPositions(Properties props) {
         if (props.containsKey("scale")) {
             globalTextScale = Float.parseFloat(props.getProperty("scale"));
@@ -67,11 +98,11 @@ public class UniversalGuiMover implements ClientModInitializer {
         });
     }
 
-    // Remove the old file-based save/load methods and replace with these empty ones
-    public static void saveGuiPositions() {}  // Now handled by main mod
-    public static void loadGuiPositions() {}  // Now handled by main mod
 
-    // Keep the rest of the original code exactly as you provided it
+    public static void saveGuiPositions() {}
+    public static void loadGuiPositions() {}
+
+
     private void setupKeybinds() {
         moveGuisKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "Move GUIs", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_P, "Universal GUI Mover"));
@@ -113,6 +144,13 @@ public class UniversalGuiMover implements ClientModInitializer {
             isMovementMode = !isMovementMode;
             if (client.player != null) {
                 client.player.sendMessage(Text.literal("GUI Movement: " + (isMovementMode ? "ON" : "OFF")), true);
+            }
+
+
+            Window window = client.getWindow();
+            if (window != null) {
+                lastWindowWidth = window.getScaledWidth();
+                lastWindowHeight = window.getScaledHeight();
             }
         }
     }

@@ -32,7 +32,7 @@ public class ArmorToggleMod implements ClientModInitializer {
                 if (client.player != null) {
                     client.player.sendMessage(Text.literal("Armor visibility: " + (hideArmor ? "HIDDEN" : "SHOWN")), true);
 
-                    // Force refresh all living entities to update armor rendering
+
                     refreshEntityRendering(client);
                 }
             }
@@ -49,7 +49,7 @@ public class ArmorToggleMod implements ClientModInitializer {
 
                     if (client.getEntityRenderDispatcher().getRenderer(entity) != null) {
 
-                        entity.age = entity.age; // Trigger a minor update
+                        entity.age = entity.age;
                     }
                 }
             }

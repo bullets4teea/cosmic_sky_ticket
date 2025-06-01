@@ -10,6 +10,9 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.sound.PositionedSoundInstance;
 import net.minecraft.client.util.InputUtil;
+import net.minecraft.entity.player.PlayerEntity;
+import net.minecraft.item.FishingRodItem;
+import net.minecraft.item.ItemStack;
 import net.minecraft.registry.Registries;
 import net.minecraft.registry.Registry;
 import net.minecraft.sound.SoundEvent;
@@ -86,10 +89,23 @@ public class MythicTrackerMod implements ClientModInitializer {
         });
 
         HudRenderCallback.EVENT.register((context, delta) -> {
-            if (isHudVisible) {
+            if (isHudVisible && isHoldingFishingRod()) {
                 drawHud(context);
             }
         });
+    }
+
+
+    private boolean isHoldingFishingRod() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+
+        PlayerEntity player = client.player;
+        ItemStack mainHand = player.getMainHandStack();
+        ItemStack offHand = player.getOffHandStack();
+
+        return mainHand.getItem() instanceof FishingRodItem ||
+                offHand.getItem() instanceof FishingRodItem;
     }
 
     private void loadConfig() {

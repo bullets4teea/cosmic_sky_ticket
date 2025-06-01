@@ -18,6 +18,11 @@ import net.minecraft.text.Text;
 import net.minecraft.util.math.RotationAxis;
 import net.minecraft.util.math.Vec3d;
 import net.minecraft.util.hit.EntityHitResult;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Properties;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
@@ -30,6 +35,7 @@ public class DamageDisplayMod implements ModInitializer {
     public static final List<DamageEntry> DAMAGE_ENTRIES = new ArrayList<>();
     private static final Random RANDOM = new Random();
     private static final Map<UUID, Float> ENTITY_LAST_HEALTH = new HashMap<>();
+    private static final Path CONFIG_PATH = Paths.get("config", "damage_display.properties");
     private static int tickCounter = 0;
     private static final int HEALTH_CHECK_INTERVAL = 1;
     private static boolean enabled = true;
@@ -49,6 +55,8 @@ public class DamageDisplayMod implements ModInitializer {
 
     @Override
     public void onInitialize() {
+        loadConfig();
+
         toggleKeybind = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "Damage Overlay Toggle",
                 InputUtil.Type.KEYSYM,
@@ -59,6 +67,7 @@ public class DamageDisplayMod implements ModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (toggleKeybind.wasPressed()) {
                 enabled = !enabled;
+                saveConfig();
                 if (client.player != null) {
                     client.player.sendMessage(Text.literal("Damage Display: " + (enabled ? "§aON" : "§cOFF")), false);
                 }
@@ -70,6 +79,29 @@ public class DamageDisplayMod implements ModInitializer {
         });
 
         WorldRenderEvents.AFTER_ENTITIES.register(this::renderDamageNumbers);
+    }
+
+    private void loadConfig() {
+        try {
+            if (Files.exists(CONFIG_PATH)) {
+                Properties props = new Properties();
+                props.load(Files.newInputStream(CONFIG_PATH));
+                enabled = Boolean.parseBoolean(props.getProperty("enabled", "true"));
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private void saveConfig() {
+        try {
+            Properties props = new Properties();
+            props.setProperty("enabled", String.valueOf(enabled));
+            Files.createDirectories(CONFIG_PATH.getParent());
+            props.store(Files.newOutputStream(CONFIG_PATH), "Damage Display Mod Configuration");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
     }
 
     private void checkAttackAndEntityHealth(MinecraftClient client) {
@@ -262,9 +294,9 @@ public class DamageDisplayMod implements ModInitializer {
     private int getTextColor(DamageEntry entry, float progress) {
         int color;
         if (entry.isHealing()) {
-            color = 0xFF00FF00; // Green for healing (both players and mobs)
+            color = 0xFF00FF00;
         } else {
-            color = entry.isPlayer() ? 0xFFFF0000 : 0xFFFFFFFF; // Red for player damage, white for mob damage
+            color = entry.isPlayer() ? 0xFFFF0000 : 0xFFFFFFFF;
         }
         int alpha = (int)(255 * (1.0f - Math.max(0, (progress - 0.7f) / 0.3f)));
         return (color & 0x00FFFFFF) | (alpha << 24);
