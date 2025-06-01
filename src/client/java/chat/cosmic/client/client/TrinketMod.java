@@ -158,7 +158,7 @@ public class TrinketMod implements ModInitializer {
             String lowerName = t.name.toLowerCase();
             if (lowerName.contains("healing")) return 1;
             if (lowerName.contains("speed")) return 2;
-            if (lowerName.contains(" ")) return 3;
+            if (lowerName.contains("strength")) return 3;
             if (lowerName.contains("pearl")) {
                 if (t.name.endsWith("III")) return 4;
                 if (t.name.endsWith("II")) return 5;
