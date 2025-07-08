@@ -26,8 +26,8 @@ public class NameTagSystem implements ClientModInitializer {
     private static final String CONFIG_FILE = "cosmic-client-nametags.json";
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().create();
     private static NameTagSystem INSTANCE;
-    private final Map<String, Boolean> tierVisibility = new HashMap<>();
-    private final Map<String, Boolean> glowVisibility = new HashMap<>();
+    public final Map<String, Boolean> tierVisibility = new HashMap<>();
+    public final Map<String, Boolean> glowVisibility = new HashMap<>();
 
     public NameTagSystem() {
         // Initialize all tiers for nametags

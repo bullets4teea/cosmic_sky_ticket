@@ -23,6 +23,8 @@ public class SettingsManager {
     private static final List<String> commandHelp = new ArrayList<>();
 
     private static final Map<String, Boolean> boosterToggleSettings = new LinkedHashMap<>();
+    private static final Map<String, Boolean> mobNameTagSettings = new LinkedHashMap<>();
+    private static final Map<String, Boolean> mobGlowSettings = new LinkedHashMap<>();
 
     private static final Map<String, Integer> trinketThresholdSettings = new LinkedHashMap<>();
     private static final Map<String, Integer> trinketCriticalSettings = new LinkedHashMap<>();
@@ -75,6 +77,8 @@ public class SettingsManager {
         setDefaultIfMissing("Armor Durability Alerts", true);
         setDefaultIfMissing("Hide Armor", false);
         setDefaultIfMissing("Players per Column", 15f);
+        setDefaultIfMissing("Damage Numbers", true);
+        setDefaultIfMissing("Highlight Search", true);
 
         setBoosterDefaultIfMissing("Island XP Booster", true);
         setBoosterDefaultIfMissing("Treasure Chance Booster", true);
@@ -83,6 +87,15 @@ public class SettingsManager {
         setBoosterDefaultIfMissing("/heal", true);
         setBoosterDefaultIfMissing("/fix", true);
         setBoosterDefaultIfMissing("/near", true);
+
+        // Initialize mob settings
+        String[] mobTiers = {"basic", "elite", "legendary", "godly", "mythic", "heroic"};
+        for (String tier : mobTiers) {
+            setDefaultIfMissing("Mob " + tier + " Nametag", true);
+            if (!tier.equals("basic") && !tier.equals("elite")) {
+                setDefaultIfMissing("Mob " + tier + " Glow", true);
+            }
+        }
 
         keybindList.put("Toggle GUI Movement", UniversalGuiMover.moveGuisKey);
         keybindList.put("Toggle Notifications", chat.cosmic.client.join.toggleNotificationsKey);
@@ -94,6 +107,7 @@ public class SettingsManager {
         keybindList.put("Reset Chest Tracker", ChestTrackerMod.resetKey);
         keybindList.put("Start/Pause Chest Timer", ChestTrackerMod.startPauseTimerKey);
         keybindList.put("Toggle Fishing HUD", MythicTrackerMod.toggleHudKey);
+        keybindList.put("Toggle Search", HighlightSearchMod.TOGGLE_SEARCH_KEY);
 
         commandHelp.add("/pr <name> - Red name");
         commandHelp.add("/pg <name> - Green name");
@@ -245,6 +259,25 @@ public class SettingsManager {
         ArmorToggleMod.hideArmor = toggleSettings.getOrDefault("Hide Armor", false);
         StatusEffectsTracker.setCombatHudEnabled(toggleSettings.getOrDefault("Combat HUD", true));
         StatusEffectsTracker.setMuleHudEnabled(toggleSettings.getOrDefault("Mule HUD", true));
+        DamageDisplayMod.enabled = toggleSettings.getOrDefault("Damage Numbers", true);
+        HighlightSearchMod.isSearchVisible = toggleSettings.getOrDefault("Highlight Search", true);
+
+        // Apply mob settings to NameTagSystem
+        String[] mobTiers = {"basic", "elite", "legendary", "godly", "mythic", "heroic"};
+        for (String tier : mobTiers) {
+            String nametagKey = "Mob " + tier + " Nametag";
+            String glowKey = "Mob " + tier + " Glow";
+
+            if (toggleSettings.containsKey(nametagKey)) {
+                NameTagSystem.getInstance().tierVisibility.put(tier + "_marauder",
+                        toggleSettings.get(nametagKey));
+            }
+
+            if (toggleSettings.containsKey(glowKey)) {
+                NameTagSystem.getInstance().glowVisibility.put(tier + "_marauder",
+                        toggleSettings.get(glowKey));
+            }
+        }
     }
 
     public static boolean isBoosterEnabled(String boosterKey) {

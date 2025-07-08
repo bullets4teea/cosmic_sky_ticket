@@ -14,9 +14,10 @@ import java.util.Map;
 public class SettingsRenderer {
     public enum Tab {
         SETTINGS("Settings", 0),
-        KEYBINDS("Keybinds", 1),
-        COMMANDS("Commands", 2),
-        HUD_SETTINGS("HUD Settings", 3);
+        // KEYBINDS("Keybinds", 1), // Temporarily disabled - keeping code for future use
+        COMMANDS("Commands", 1), // Changed index from 2 to 1
+        HUD_SETTINGS("HUD Settings", 2), // Changed index from 3 to 2
+        MOBS("Mobs", 3); // Changed index from 4 to 3
 
         public final String name;
         public final int index;
@@ -31,11 +32,12 @@ public class SettingsRenderer {
     private static int settingsX = 0;
     private static int settingsY = 0;
     private static final int WIDTH = 350;
-    private static final int HEIGHT = 250;
+    private static final int HEIGHT = 300; // Increased height for mob settings
     private static final int TAB_HEIGHT = 20;
     private static final Map<String, Boolean> lastToggleState = new HashMap<>();
     private static final Map<String, Boolean> lastSliderState = new HashMap<>();
     private static int sliderDragX = -1;
+    private static final Map<String, Boolean> mobSectionOpen = new HashMap<>();
 
     public static void setPosition(int x, int y) {
         settingsX = x;
@@ -84,9 +86,10 @@ public class SettingsRenderer {
 
         switch (currentTab) {
             case SETTINGS -> renderSettingsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
-            case KEYBINDS -> renderKeybindsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
+            // case KEYBINDS -> renderKeybindsTab(context, client, settingsX, contentY, WIDTH, contentHeight); // Temporarily disabled
             case COMMANDS -> renderCommandsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
             case HUD_SETTINGS -> renderHudSettingsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
+            case MOBS -> renderMobsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
         }
     }
 
@@ -104,6 +107,7 @@ public class SettingsRenderer {
             String key = entry.getKey();
             // Only skip other HUD settings, but show Trinket Display HUD
             if (key.contains("HUD") && !key.equals("Trinket Display HUD")) continue;
+            if (key.startsWith("Mob ")) continue; // Skip mob settings in main tab
 
             String text = key + ": " + (entry.getValue() ? "ON" : "OFF");
             context.drawTextWithShadow(client.textRenderer, text, x + 10, optionY, 0xFFFFFF);
@@ -235,6 +239,76 @@ public class SettingsRenderer {
         }
     }
 
+    private static void renderMobsTab(DrawContext context, MinecraftClient client, int x, int y, int width, int height) {
+        int optionY = y + 10;
+        String[] mobTiers = {"basic", "elite", "legendary", "godly", "mythic", "heroic"};
+        String[] tierNames = {"Basic", "Elite", "Legendary", "Godly", "Mythic", "Heroic"};
+
+        double mouseX = client.mouse.getX() * client.getWindow().getScaledWidth() / client.getWindow().getWidth();
+        double mouseY = client.mouse.getY() * client.getWindow().getScaledHeight() / client.getWindow().getHeight();
+        boolean mouseDown = GLFW.glfwGetMouseButton(client.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        boolean mousePressed = mouseDown && !SettingsInputHandler.getLastMouseState();
+        SettingsInputHandler.setLastMouseState(mouseDown);
+
+        context.drawTextWithShadow(client.textRenderer, "Mob Settings:", x + 10, optionY, 0x55FFFF);
+        optionY += 12;
+
+        for (int i = 0; i < mobTiers.length; i++) {
+            String tier = mobTiers[i];
+            String tierName = tierNames[i];
+            String nametagKey = "Mob " + tier + " Nametag";
+            String glowKey = "Mob " + tier + " Glow";
+
+            boolean nametagVisible = SettingsManager.getToggleSettings().getOrDefault(nametagKey, true);
+            boolean glowVisible = SettingsManager.getToggleSettings().getOrDefault(glowKey, true);
+
+            // Render tier name
+            context.drawTextWithShadow(client.textRenderer, tierName + " Marauder:", x + 20, optionY, 0xFFFFFF);
+            optionY += 12;
+
+            // Nametag toggle
+            String nametagText = "Nametag: " + (nametagVisible ? "ON" : "OFF");
+            context.drawTextWithShadow(client.textRenderer, nametagText, x + 30, optionY, 0xFFFFFF);
+
+            boolean nametagMouseOver = mouseX >= x + 30 && mouseX <= x + 130 &&
+                    mouseY >= optionY && mouseY <= optionY + 10;
+
+            if (nametagMouseOver) {
+                context.fill(x + 30, optionY, x + 130, optionY + 10, 0x20FFFFFF);
+                if (mousePressed) {
+                    SettingsInputHandler.saveThresholdsIfEditing();
+                    SettingsManager.getToggleSettings().put(nametagKey, !nametagVisible);
+                    SettingsManager.applySettings();
+                    SettingsManager.saveSettings();
+                }
+            }
+
+            // Glow toggle (only for higher tiers)
+            if (!tier.equals("basic") && !tier.equals("elite")) {
+                String glowText = "Glow: " + (glowVisible ? "ON" : "OFF");
+                context.drawTextWithShadow(client.textRenderer, glowText, x + 150, optionY, 0xFFFFFF);
+
+                boolean glowMouseOver = mouseX >= x + 150 && mouseX <= x + 250 &&
+                        mouseY >= optionY && mouseY <= optionY + 10;
+
+                if (glowMouseOver) {
+                    context.fill(x + 150, optionY, x + 250, optionY + 10, 0x20FFFFFF);
+                    if (mousePressed) {
+                        SettingsInputHandler.saveThresholdsIfEditing();
+                        SettingsManager.getToggleSettings().put(glowKey, !glowVisible);
+                        SettingsManager.applySettings();
+                        SettingsManager.saveSettings();
+                    }
+                }
+            }
+
+            optionY += 12;
+        }
+    }
+
+    // KEYBIND TAB CODE - TEMPORARILY DISABLED BUT KEPT FOR FUTURE USE
+    // To re-enable: uncomment the KEYBINDS enum value above and the case in the switch statement
+    /*
     private static void renderKeybindsTab(DrawContext context, MinecraftClient client, int x, int y, int width, int height) {
         int optionY = y + 10;
 
@@ -288,6 +362,7 @@ public class SettingsRenderer {
         optionY += 10;
         context.drawTextWithShadow(client.textRenderer, "Press ESC to cancel editing", x + 10, optionY, 0xFFAAAAAA);
     }
+    */
 
     private static void renderCommandsTab(DrawContext context, MinecraftClient client, int x, int y, int width, int height) {
         int optionY = y + 10;

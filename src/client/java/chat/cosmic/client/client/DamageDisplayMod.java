@@ -1,15 +1,12 @@
 package chat.cosmic.client.client;
 
 import net.fabricmc.api.ModInitializer;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
+import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderEvents;
-import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
-import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.render.Camera;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.entity.Entity;
 import net.minecraft.entity.LivingEntity;
@@ -38,8 +35,7 @@ public class DamageDisplayMod implements ModInitializer {
     private static final Path CONFIG_PATH = Paths.get("config", "damage_display.properties");
     private static int tickCounter = 0;
     private static final int HEALTH_CHECK_INTERVAL = 1;
-    private static boolean enabled = true;
-    private static KeyBinding toggleKeybind;
+    public static boolean enabled = true;
     private static UUID lastHitEntityId = null;
     private static long lastHitTime = 0;
     private static final long HIT_DETECTION_WINDOW = 250;
@@ -57,22 +53,7 @@ public class DamageDisplayMod implements ModInitializer {
     public void onInitialize() {
         loadConfig();
 
-        toggleKeybind = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Damage Overlay Toggle",
-                InputUtil.Type.KEYSYM,
-                InputUtil.GLFW_KEY_J,
-                "adv"
-        ));
-
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (toggleKeybind.wasPressed()) {
-                enabled = !enabled;
-                saveConfig();
-                if (client.player != null) {
-                    client.player.sendMessage(Text.literal("Damage Display: " + (enabled ? "§aON" : "§cOFF")), false);
-                }
-            }
-
             if (enabled) {
                 checkAttackAndEntityHealth(client);
             }
@@ -93,7 +74,7 @@ public class DamageDisplayMod implements ModInitializer {
         }
     }
 
-    private void saveConfig() {
+    public static void saveConfig() {
         try {
             Properties props = new Properties();
             props.setProperty("enabled", String.valueOf(enabled));
