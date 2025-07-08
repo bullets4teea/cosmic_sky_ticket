@@ -32,16 +32,13 @@ import java.util.concurrent.CompletableFuture;
 
 @Environment(EnvType.CLIENT)
 public class Amor implements ClientModInitializer {
-
     private static final String DEFAULT_SOUND = "minecraft:block.note_block.pling";
-
     private final Map<ItemStack, Integer> notificationCounts = new HashMap<>();
     private final Map<UUID, Integer> playerThresholds = new HashMap<>();
     private final Map<UUID, String> playerSoundPreferences = new HashMap<>();
-    private boolean enabled = true;
-    private KeyBinding toggleKeybind;
+    public static boolean enabled = true;
+    public static KeyBinding toggleKeybind;
     private final List<ArmorDisplayInfo> lowDurabilityItems = new ArrayList<>();
-
 
     private static class ArmorDisplayInfo {
         final ItemStack stack;
@@ -91,7 +88,6 @@ public class Amor implements ClientModInitializer {
 
         List<ItemStack> itemsToCheck = new ArrayList<>();
 
-
         for (int i = 0; i < 4; i++) {
             ItemStack armorStack = client.player.getInventory().armor.get(i);
             if (armorStack.isEmpty()) continue;
@@ -99,10 +95,8 @@ public class Amor implements ClientModInitializer {
             itemsToCheck.add(armorStack);
         }
 
-
         addHandItem(itemsToCheck, client.player.getMainHandStack());
         addHandItem(itemsToCheck, client.player.getOffHandStack());
-
 
         lowDurabilityItems.clear();
         boolean shouldPlaySound = false;
@@ -114,10 +108,8 @@ public class Amor implements ClientModInitializer {
             int durabilityPercent = (int) ((double) currentDurability / stack.getMaxDamage() * 100);
 
             if (currentDurability <= threshold) {
-
                 String itemName = getSimpleName(stack.getName().getString());
                 lowDurabilityItems.add(new ArmorDisplayInfo(stack, durabilityPercent, itemName));
-
 
                 int count = notificationCounts.getOrDefault(stack, 0);
                 if (count < 1) {
@@ -136,7 +128,6 @@ public class Amor implements ClientModInitializer {
     }
 
     private String getSimpleName(String fullName) {
-
         return fullName.replace("Diamond ", "")
                 .replace("Iron ", "")
                 .replace("Golden ", "Gold ")
@@ -165,9 +156,7 @@ public class Amor implements ClientModInitializer {
         int screenHeight = context.getScaledWindowHeight();
         TextRenderer textRenderer = client.textRenderer;
 
-
         ArmorDisplayInfo info = lowDurabilityItems.get(0);
-
 
         int centerX = screenWidth / 2;
         int centerY = screenHeight / 2 - 30;
@@ -175,19 +164,15 @@ public class Amor implements ClientModInitializer {
         String alertText = "about to break";
         int textWidth = textRenderer.getWidth(alertText);
 
-
         int totalWidth = 16 + 4 + textWidth + 4 + textRenderer.getWidth("!");
-
 
         int itemX = centerX - totalWidth / 2;
         int itemY = centerY - 8;
         context.drawItem(info.stack, itemX, itemY);
 
-
         int textX = itemX + 16 + 4;
         int textY = centerY - 4;
         context.drawText(textRenderer, alertText, textX, textY, 0xFFFF0000, true);
-
 
         int exclamationX = textX + textWidth + 4;
         context.drawText(textRenderer, "!", exclamationX, textY, 0xFFFF0000, true);

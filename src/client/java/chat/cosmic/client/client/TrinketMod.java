@@ -1,3 +1,4 @@
+// TrinketMod.java
 package chat.cosmic.client.client;
 
 import net.fabricmc.api.ModInitializer;
@@ -25,26 +26,36 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class TrinketMod implements ModInitializer {
-
     private static final Pattern CHARGE_PATTERN = Pattern.compile(".*\\((\\d+)\\)");
     private static final String HUD_ID = "trinket_display";
     private static final Path CONFIG_PATH = Paths.get("config", "trinket_display.properties");
     private UniversalGuiMover.HudContainer hudContainer;
     private boolean hudVisible = true;
     private KeyBinding toggleKey;
+    private static boolean modEnabled = true;
+    private static boolean hudEnabled = true;
 
     private static final List<String> ALLOWED_TRINKETS = List.of(
             "Speed Trinket I",
             "Strength Trinket I",
             "Ender Pearl Trinket",
-            "Healing Trinket I",
+            "Healing Trink I",
             "Healing Trinket II",
             "Healing Trinket III"
     );
 
+    public static void setModEnabled(boolean enabled) {
+        modEnabled = enabled;
+    }
+
+    public static void setHudEnabled(boolean enabled) {
+        hudEnabled = enabled;
+    }
+
     @Override
     public void onInitialize() {
         loadConfig();
+        hudEnabled = SettingsManager.getToggleSettings().getOrDefault("Trinket Display HUD", true);
 
         HudRenderCallback.EVENT.register(this::renderTrinkets);
 
@@ -92,7 +103,7 @@ public class TrinketMod implements ModInitializer {
     }
 
     private void renderTrinkets(DrawContext drawContext, float tickDelta) {
-        if (!hudVisible) return;
+        if (!modEnabled || !hudVisible || !hudEnabled) return;
 
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return;
@@ -122,9 +133,8 @@ public class TrinketMod implements ModInitializer {
 
         int yOffset = 0;
         for (TrinketData trinket : trinkets) {
-            Formatting color = getColor(trinket);
             drawContext.drawText(client.textRenderer,
-                    Text.literal(trinket.name + ": " + trinket.charges).formatted(color),
+                    Text.literal(trinket.name + ": " + trinket.charges).formatted(Formatting.WHITE),
                     0, yOffset, 0xFFFFFF, false);
             yOffset += 10;
         }
@@ -134,7 +144,6 @@ public class TrinketMod implements ModInitializer {
 
     private List<TrinketData> getHotbarTrinkets(PlayerInventory inv) {
         List<TrinketData> trinkets = new ArrayList<>();
-
 
         for (int i = 0; i < 9; i++) {
             ItemStack stack = inv.getStack(i);
@@ -168,34 +177,6 @@ public class TrinketMod implements ModInitializer {
         }));
 
         return trinkets;
-    }
-
-    private Formatting getColor(TrinketData trinket) {
-        String lowerName = trinket.name.toLowerCase();
-        int charges = trinket.charges;
-
-        if (lowerName.contains("healing")) {
-            if (charges > 50) return Formatting.GREEN;
-            if (charges >= 25) return Formatting.GOLD;
-            return Formatting.RED;
-        }
-        else if (lowerName.contains("speed")) {
-            if (charges >= 6) return Formatting.GREEN;
-            if (charges >= 4) return Formatting.GOLD;
-            return Formatting.RED;
-        }
-        else if (lowerName.contains("strength")) {
-            if (charges >= 6) return Formatting.GREEN;
-            if (charges >= 4) return Formatting.GOLD;
-            return Formatting.RED;
-        }
-        else if (lowerName.contains("ender")) {
-            if (charges >= 7) return Formatting.GREEN;
-            if (charges >= 5) return Formatting.GOLD;
-            return Formatting.RED;
-        }
-
-        return Formatting.RED;
     }
 
     private static class TrinketData {

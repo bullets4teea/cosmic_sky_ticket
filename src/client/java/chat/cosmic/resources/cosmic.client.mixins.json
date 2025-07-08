@@ -5,13 +5,12 @@
   "mixins": [],
   "client": [
     "ArmorFeatureRendererMixin",
-    "ChatHudMixin",
     "EntityMixin",
     "HandledScreenMixin",
-    "InGameHudMixin",
     "InventorySlotMixin",
     "LivingEntityRendererMixin",
-    "MixinClientPlayerInteractionManager"
+    "MixinClientPlayerInteractionManager",
+    "ArmorFeatureRendererMixin"
   ],
   "injectors": {
     "defaultRequire": 1

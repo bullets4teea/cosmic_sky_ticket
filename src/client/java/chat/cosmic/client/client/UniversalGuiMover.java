@@ -1,3 +1,4 @@
+// UniversalGuiMover.java
 package chat.cosmic.client.client;
 
 import net.fabricmc.api.ClientModInitializer;
@@ -7,37 +8,98 @@ import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.Window;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Properties;
 
 public class UniversalGuiMover implements ClientModInitializer {
+    public static KeyBinding moveGuisKey;
+    public static KeyBinding scaleUpKey, scaleDownKey;
 
-    private static KeyBinding moveGuisKey;
     private static boolean isMovementMode = false;
     private static HudContainer draggedContainer = null;
     private static final Map<String, HudContainer> hudContainers = new HashMap<>();
     private static final String CONFIG_FILE = "config/untitled20_mod.properties";
     private static float globalTextScale = 1.0f;
-    private static KeyBinding scaleUpKey, scaleDownKey;
     private static boolean dragging;
     private static int lastWindowWidth = 0;
     private static int lastWindowHeight = 0;
+    private static final HudContainer settingsButton = new HudContainer(0, 0, 60, 20, 1);
+
+    private static class DummyScreen extends Screen {
+        public DummyScreen() {
+            super(Text.of(""));
+        }
+
+        @Override
+        public boolean shouldPause() {
+            return true;
+        }
+
+        @Override
+        public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        }
+
+        @Override
+        public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                toggleMovementMode(MinecraftClient.getInstance());
+                return true;
+            }
+
+            if (UniversalGuiMover.moveGuisKey.matchesKey(keyCode, scanCode)) {
+                toggleMovementMode(MinecraftClient.getInstance());
+                return true;
+            }
+            if (UniversalGuiMover.scaleUpKey.matchesKey(keyCode, scanCode)) {
+                updateScale(0.1f, MinecraftClient.getInstance());
+                return true;
+            }
+            if (UniversalGuiMover.scaleDownKey.matchesKey(keyCode, scanCode)) {
+                updateScale(-0.1f, MinecraftClient.getInstance());
+                return true;
+            }
+
+            SettingsInputHandler.handleKeyPress(keyCode, scanCode, 0, 0);
+            return super.keyPressed(keyCode, scanCode, modifiers);
+        }
+
+        @Override
+        public boolean charTyped(char chr, int modifiers) {
+            SettingsInputHandler.handleCharInput(chr);
+            return super.charTyped(chr, modifiers);
+        }
+    }
 
     @Override
     public void onInitializeClient() {
-        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> saveGuiPositions());
+        ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
+            saveGuiPositions();
+            SettingsManager.saveSettings();
+        });
+
         setupKeybinds();
         HudRenderCallback.EVENT.register(this::onHudRender);
-
-
         ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
+        ClientTickEvents.START_CLIENT_TICK.register(client -> {
+            if (isMovementMode) {
+                client.mouse.updateMouse();
+            }
+        });
+
+        SettingsManager.initialize();
+        trackHudContainer("settings_button", settingsButton);
     }
 
     private void onClientTick(MinecraftClient client) {
@@ -48,7 +110,6 @@ public class UniversalGuiMover implements ClientModInitializer {
 
         int currentWidth = window.getScaledWidth();
         int currentHeight = window.getScaledHeight();
-
 
         if ((lastWindowWidth != currentWidth || lastWindowHeight != currentHeight) && !isMovementMode) {
             if (lastWindowWidth > 0 && lastWindowHeight > 0) {
@@ -65,8 +126,39 @@ public class UniversalGuiMover implements ClientModInitializer {
             lastWindowWidth = currentWidth;
             lastWindowHeight = currentHeight;
         }
+
+        if (isMovementMode) {
+            settingsButton.x = window.getScaledWidth() - settingsButton.getScaledWidth() - 5;
+            settingsButton.y = 5;
+        }
+
+        if (moveGuisKey.wasPressed() && client.currentScreen == null) {
+            toggleMovementMode(client);
+        }
     }
 
+    public static void toggleMovementMode(MinecraftClient client) {
+        isMovementMode = !isMovementMode;
+
+        if (isMovementMode) {
+            client.setScreen(new DummyScreen());
+            client.options.pauseOnLostFocus = true;
+        } else {
+            client.setScreen(null);
+            client.options.pauseOnLostFocus = false;
+            SettingsManager.closeSettings();
+        }
+
+        if (client.player != null) {
+            client.player.sendMessage(Text.literal("GUI Movement: " + (isMovementMode ? "ON" : "OFF")), true);
+        }
+
+        Window window = client.getWindow();
+        if (window != null) {
+            lastWindowWidth = window.getScaledWidth();
+            lastWindowHeight = window.getScaledHeight();
+        }
+    }
 
     public static void loadGuiPositions(Properties props) {
         if (props.containsKey("scale")) {
@@ -98,14 +190,32 @@ public class UniversalGuiMover implements ClientModInitializer {
         });
     }
 
+    public static void saveGuiPositions() {
+        Properties props = new Properties();
+        saveGuiPositions(props);
+        try {
+            Files.createDirectories(Path.of(CONFIG_FILE).getParent());
+            props.store(Files.newOutputStream(Path.of(CONFIG_FILE)), "GUI Positions");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
-    public static void saveGuiPositions() {}
-    public static void loadGuiPositions() {}
-
+    public static void loadGuiPositions() {
+        Properties props = new Properties();
+        try {
+            if (Files.exists(Path.of(CONFIG_FILE))) {
+                props.load(Files.newInputStream(Path.of(CONFIG_FILE)));
+                loadGuiPositions(props);
+            }
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
 
     private void setupKeybinds() {
         moveGuisKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Move GUIs", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_P, "Universal GUI Mover"));
+                "Move GUIs", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_Y, "Universal GUI Mover"));
 
         scaleUpKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "Scale Up", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_EQUAL, "Universal GUI Mover"));
@@ -114,53 +224,85 @@ public class UniversalGuiMover implements ClientModInitializer {
                 "Scale Down", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_MINUS, "Universal GUI Mover"));
     }
 
+    public static void handleKeyPress(int key, int scancode, int action, int modifiers) {
+        SettingsInputHandler.handleKeyPress(key, scancode, action, modifiers);
+    }
+
+    public static void handleCharInput(char character) {
+        SettingsInputHandler.handleCharInput(character);
+    }
+
     private void onHudRender(DrawContext context, float tickDelta) {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client == null) return;
 
-        handleMovementMode(client);
-        handleScaling(client);
         handleDragging(client);
 
         if (isMovementMode) {
-            for (HudContainer container : hudContainers.values()) {
+            context.fill(0, 0, client.getWindow().getScaledWidth(), client.getWindow().getScaledHeight(), 0x80000000);
+
+            for (Map.Entry<String, HudContainer> entry : hudContainers.entrySet()) {
+                HudContainer container = entry.getValue();
+                if (container == settingsButton) continue;
+
+                if (!isContainerEnabled(entry.getKey())) continue;
+
                 int x = container.x;
                 int y = container.y;
                 int width = container.getScaledWidth();
                 int height = container.getScaledHeight();
 
                 context.fill(x, y, x + width, y + height, 0x20FFFFFF);
-
                 context.fill(x, y, x + width, y + 2, 0xFFFFFFFF);
                 context.fill(x, y + height - 2, x + width, y + height, 0xFFFFFFFF);
                 context.fill(x, y, x + 2, y + height, 0xFFFFFFFF);
                 context.fill(x + width - 2, y, x + width, y + height, 0xFFFFFFFF);
             }
+
+            HudContainer button = getHudContainer("settings_button");
+            if (button != null) {
+                context.fill(button.x, button.y, button.x + button.getScaledWidth(), button.y + button.getScaledHeight(), 0x55000000);
+                context.drawCenteredTextWithShadow(client.textRenderer, Text.of("Settings"),
+                        button.x + button.getScaledWidth()/2, button.y + 6, 0xFFFFFF);
+            }
+
+            double mouseX = client.mouse.getX() * client.getWindow().getScaledWidth() / client.getWindow().getWidth();
+            double mouseY = client.mouse.getY() * client.getWindow().getScaledHeight() / client.getWindow().getHeight();
+            boolean mouseDown = GLFW.glfwGetMouseButton(client.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+
+            if (!SettingsInputHandler.isWaitingForKey()) {
+                SettingsInputHandler.handleClick(mouseX, mouseY, mouseDown);
+
+                if (SettingsInputHandler.shouldToggleSettings(mouseX, mouseY, mouseDown)) {
+                    SettingsManager.toggleSettings();
+                }
+            }
+
+            if (SettingsManager.isSettingsOpen()) {
+                SettingsRenderer.render(context, client);
+            }
         }
     }
 
-    private void handleMovementMode(MinecraftClient client) {
-        if (moveGuisKey.wasPressed()) {
-            isMovementMode = !isMovementMode;
-            if (client.player != null) {
-                client.player.sendMessage(Text.literal("GUI Movement: " + (isMovementMode ? "ON" : "OFF")), true);
-            }
+    private static boolean isContainerEnabled(String containerId) {
+        Map<String, Boolean> toggleSettings = SettingsManager.getToggleSettings();
+        Map<String, Boolean> boosterToggleSettings = SettingsManager.getBoosterToggleSettings();
 
-
-            Window window = client.getWindow();
-            if (window != null) {
-                lastWindowWidth = window.getScaledWidth();
-                lastWindowHeight = window.getScaledHeight();
-            }
+        // Special case for trinket display
+        if ("trinket_display".equals(containerId)) {
+            return toggleSettings.getOrDefault("Trinket Display HUD", true);
         }
+
+        if (toggleSettings.containsKey(containerId + " HUD")) {
+            return toggleSettings.get(containerId + " HUD");
+        }
+        if (boosterToggleSettings.containsKey(containerId)) {
+            return boosterToggleSettings.get(containerId);
+        }
+        return true;
     }
 
-    private void handleScaling(MinecraftClient client) {
-        if (scaleUpKey.wasPressed()) updateScale(0.1f, client);
-        if (scaleDownKey.wasPressed()) updateScale(-0.1f, client);
-    }
-
-    private void updateScale(float delta, MinecraftClient client) {
+    private static void updateScale(float delta, MinecraftClient client) {
         globalTextScale = Math.max(0.5f, Math.min(2.5f, globalTextScale + delta));
         if (client.player != null) {
             client.player.sendMessage(Text.literal("Scale: " + String.format("%.1f", globalTextScale)), true);
@@ -168,7 +310,9 @@ public class UniversalGuiMover implements ClientModInitializer {
     }
 
     private void handleDragging(MinecraftClient client) {
-        if (!isMovementMode) return;
+        if (!isMovementMode || SettingsManager.isSettingsOpen() || SettingsInputHandler.isWaitingForKey()) {
+            return;
+        }
 
         Window window = client.getWindow();
         double mouseX = client.mouse.getX() * window.getScaledWidth() / window.getWidth();
@@ -179,6 +323,7 @@ public class UniversalGuiMover implements ClientModInitializer {
         if (mouseDown) {
             if (draggedContainer == null) {
                 hudContainers.values().stream()
+                        .filter(container -> container != settingsButton)
                         .filter(container -> isMouseOver(container, mouseX, mouseY))
                         .findFirst()
                         .ifPresent(container -> draggedContainer = container);

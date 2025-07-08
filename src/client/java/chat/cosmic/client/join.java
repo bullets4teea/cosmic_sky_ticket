@@ -38,8 +38,8 @@ public class join implements ClientModInitializer {
     public static Map<String, String> playerColors = new HashMap<>();
     public static int MAX_PLAYERS_PER_COLUMN = 15;
 
-    private static KeyBinding toggleNotificationsKey;
-    private static KeyBinding toggleGuiKey;
+    public static KeyBinding toggleNotificationsKey;
+    public static KeyBinding toggleGuiKey;
     private static final UniversalGuiMover.HudContainer hudContainer = new UniversalGuiMover.HudContainer(10, 10, 100, 40, 1);
     private static final File configFile = new File("config/untitled20_mod.properties");
 
@@ -68,14 +68,19 @@ public class join implements ClientModInitializer {
         ));
 
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            dispatcher.register(ClientCommandManager.literal("ignore")
-                    .then(ClientCommandManager.argument("username", StringArgumentType.string())
-                            .executes(context -> {
-                                String username = StringArgumentType.getString(context, "username").toLowerCase();
-                                toggleIgnoredPlayer(username);
-                                context.getSource().sendFeedback(Text.of(username + " is now " + (isIgnored(username) ? "ignored" : "unignored")));
-                                return 1;
-                            })
+            // Fixed command registration
+            dispatcher.register(ClientCommandManager.literal("player")
+                    .then(ClientCommandManager.literal("list")
+                            .then(ClientCommandManager.literal("ignore")
+                                    .then(ClientCommandManager.argument("username", StringArgumentType.string())
+                                            .executes(context -> {
+                                                String username = StringArgumentType.getString(context, "username").toLowerCase();
+                                                toggleIgnoredPlayer(username);
+                                                context.getSource().sendFeedback(Text.of(username + " is now " + (isIgnored(username) ? "ignored" : "unignored")));
+                                                return 1;
+                                            })
+                                    )
+                            )
                     ));
 
             String[] colors = {"pr", "pg", "pdb"};

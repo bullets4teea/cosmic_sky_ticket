@@ -13,20 +13,14 @@ import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
 
-import java.io.*;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Properties;
-
 public class ArmorToggleMod implements ClientModInitializer {
     public static boolean hideArmor = false;
     private static KeyBinding toggleKey;
-    private static final String CONFIG_FILE_NAME = "armorvisibility.cfg";
 
     @Override
     public void onInitializeClient() {
-
-        loadConfig();
+        SettingsManager.initialize();
+        hideArmor = SettingsManager.getToggleSettings().getOrDefault("Hide Armor", false);
 
         toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "Toggle Armor Visibility",
@@ -38,13 +32,12 @@ public class ArmorToggleMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             if (toggleKey.wasPressed()) {
                 hideArmor = !hideArmor;
+                SettingsManager.getToggleSettings().put("Hide Armor", hideArmor);
                 if (client.player != null) {
                     client.player.sendMessage(Text.literal("Armor visibility: " + (hideArmor ? "HIDDEN" : "SHOWN")), true);
                     refreshEntityRendering(client);
-
-                    // Save the new state
-                    saveConfig();
                 }
+                SettingsManager.saveSettings();
             }
         });
     }
@@ -65,38 +58,5 @@ public class ArmorToggleMod implements ClientModInitializer {
                 client.worldRenderer.reload();
             }
         }
-    }
-
-    private void loadConfig() {
-        Path configPath = getConfigPath();
-        if (configPath.toFile().exists()) {
-            try (InputStream input = new FileInputStream(configPath.toFile())) {
-                Properties prop = new Properties();
-                prop.load(input);
-                hideArmor = Boolean.parseBoolean(prop.getProperty("hideArmor", "false"));
-            } catch (IOException ex) {
-                System.err.println("Error loading armor visibility config: " + ex.getMessage());
-            }
-        }
-    }
-
-    private void saveConfig() {
-        Path configPath = getConfigPath();
-        try (OutputStream output = new FileOutputStream(configPath.toFile())) {
-            Properties prop = new Properties();
-            prop.setProperty("hideArmor", String.valueOf(hideArmor));
-            prop.store(output, "Armor Visibility Configuration");
-        } catch (IOException ex) {
-            System.err.println("Error saving armor visibility config: " + ex.getMessage());
-        }
-    }
-
-    private Path getConfigPath() {
-
-        Path configDir = Paths.get(MinecraftClient.getInstance().runDirectory.getPath(), "config");
-        if (!configDir.toFile().exists()) {
-            configDir.toFile().mkdirs();
-        }
-        return configDir.resolve(CONFIG_FILE_NAME);
     }
 }

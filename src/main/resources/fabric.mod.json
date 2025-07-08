@@ -13,8 +13,7 @@
 
     "main": [
       "chat.cosmic.client.client.DamageDisplayMod",
-      "chat.cosmic.client.client.TrinketMod",
-      "chat.cosmic.client.client.CalculatorMod"
+      "chat.cosmic.client.client.TrinketMod"
 
     ],
 
@@ -29,7 +28,9 @@
       "chat.cosmic.client.client.UniversalGuiMover",
       "chat.cosmic.client.client.NumberOverlayMod",
       "chat.cosmic.client.client.NameTagSystem",
-      "chat.cosmic.client.client.ArmorToggleMod"
+      "chat.cosmic.client.client.ArmorToggleMod",
+      "chat.cosmic.client.client.CalculatorMod",
+      "chat.cosmic.client.client.AnnouncementHiderClient"
 
     ]
   },

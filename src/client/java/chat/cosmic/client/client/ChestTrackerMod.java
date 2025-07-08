@@ -48,7 +48,7 @@ public class ChestTrackerMod implements ClientModInitializer {
     private static final Pattern TIRE_SYS_CHEST_PATTERN = Pattern.compile("\\* Tire Chest dropped nearby!\\s+\\(System Override\\) \\*");
     private static final Pattern MAX_GEM_PATTERN = Pattern.compile("\\* \\+1 MAX GEM FOUND \\*");
 
-    private static KeyBinding resetKey, toggleHudKey, startPauseTimerKey;
+    public static KeyBinding resetKey, toggleHudKey, startPauseTimerKey; // Changed to public
     private static boolean hudVisible = true;
     private static final Path CONFIG_PATH = Path.of("config/chesttracker_hud.dat");
     private static long startTime = 0;
@@ -58,9 +58,14 @@ public class ChestTrackerMod implements ClientModInitializer {
     private static boolean showSysView = false;
     private static long sysViewEndTime = 0;
     private static int maxGemCount = 0;
+    private static boolean modEnabled = true;
 
     private static final UniversalGuiMover.HudContainer hudContainer =
             new UniversalGuiMover.HudContainer(10, 100, 120, 9, 8);
+
+    public static void setModEnabled(boolean enabled) {
+        modEnabled = enabled;
+    }
 
     @Override
     public void onInitializeClient() {
@@ -81,6 +86,19 @@ public class ChestTrackerMod implements ClientModInitializer {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(ClientCommandManager.literal("sys")
                     .executes(this::handleSysCommand));
+
+            // Chest reset command (only resets counts, not timer)
+            dispatcher.register(ClientCommandManager.literal("chestreset")
+                    .executes(this::handleChestResetCommand));
+
+            // Timer control commands
+            dispatcher.register(ClientCommandManager.literal("chesttimer")
+                    .then(ClientCommandManager.literal("reset")
+                            .executes(this::handleTimerResetCommand))
+                    .then(ClientCommandManager.literal("start")
+                            .executes(this::handleTimerStartCommand))
+                    .then(ClientCommandManager.literal("pause")
+                            .executes(this::handleTimerPauseCommand)));
         });
     }
 
@@ -88,6 +106,38 @@ public class ChestTrackerMod implements ClientModInitializer {
         showSysView = true;
         sysViewEndTime = System.currentTimeMillis() + 10000;
         context.getSource().sendFeedback(Text.literal("Showing System Override stats for 10 seconds"));
+        return 1;
+    }
+
+    private int handleChestResetCommand(CommandContext<FabricClientCommandSource> context) {
+        resetCounts();
+        context.getSource().sendFeedback(Text.literal("Reset all chest counts and gems!"));
+        return 1;
+    }
+
+    private int handleTimerResetCommand(CommandContext<FabricClientCommandSource> context) {
+        resetTimer();
+        context.getSource().sendFeedback(Text.literal("Reset timer to 00:00:00!"));
+        return 1;
+    }
+
+    private int handleTimerStartCommand(CommandContext<FabricClientCommandSource> context) {
+        if (!isTimerRunning) {
+            startTimer();
+            context.getSource().sendFeedback(Text.literal("Timer started!"));
+        } else {
+            context.getSource().sendFeedback(Text.literal("Timer is already running!"));
+        }
+        return 1;
+    }
+
+    private int handleTimerPauseCommand(CommandContext<FabricClientCommandSource> context) {
+        if (isTimerRunning) {
+            pauseTimer();
+            context.getSource().sendFeedback(Text.literal("Timer paused!"));
+        } else {
+            context.getSource().sendFeedback(Text.literal("Timer is not running!"));
+        }
         return 1;
     }
 
@@ -127,7 +177,11 @@ public class ChestTrackerMod implements ClientModInitializer {
     }
 
     private void handleClientTick(MinecraftClient client) {
-        if (resetKey.wasPressed()) handleReset();
+        if (resetKey.wasPressed()) {
+            resetCounts();
+            resetTimer();
+            sendClientMessage("Reset all chest counts, gems, and timer!");
+        }
         if (startPauseTimerKey.wasPressed()) handleTimerToggle();
         if (toggleHudKey.wasPressed()) toggleHudVisibility();
 
@@ -136,15 +190,27 @@ public class ChestTrackerMod implements ClientModInitializer {
         }
     }
 
-    private void handleReset() {
-        resetCounts();
-        resetTimer();
-        sendClientMessage("Reset all chest counts, gems, and timer!");
+    private void handleTimerToggle() {
+        if (isTimerRunning) {
+            pauseTimer();
+        } else {
+            startTimer();
+        }
+        sendClientMessage("Timer " + (isTimerRunning ? "started" : "paused"));
     }
 
-    private void handleTimerToggle() {
-        toggleTimer();
-        sendClientMessage("Timer " + (isTimerRunning ? "started" : "paused"));
+    private void startTimer() {
+        if (!isTimerRunning) {
+            startTime = System.currentTimeMillis() - pausedTime;
+            isTimerRunning = true;
+        }
+    }
+
+    private void pauseTimer() {
+        if (isTimerRunning) {
+            pausedTime = System.currentTimeMillis() - startTime;
+            isTimerRunning = false;
+        }
     }
 
     private void toggleHudVisibility() {
@@ -215,16 +281,6 @@ public class ChestTrackerMod implements ClientModInitializer {
         isTimerRunning = false;
     }
 
-    private void toggleTimer() {
-        if (isTimerRunning) {
-            pausedTime = System.currentTimeMillis() - startTime;
-            isTimerRunning = false;
-        } else {
-            startTime = System.currentTimeMillis() - pausedTime;
-            isTimerRunning = true;
-        }
-    }
-
     private String getElapsedTime() {
         long elapsedMillis = isTimerRunning ? System.currentTimeMillis() - startTime : pausedTime;
         long seconds = elapsedMillis / 1000;
@@ -232,7 +288,7 @@ public class ChestTrackerMod implements ClientModInitializer {
     }
 
     private void renderHud(DrawContext context, float tickDelta) {
-        if (!hudVisible) return;
+        if (!modEnabled || !hudVisible) return;
 
         MinecraftClient client = MinecraftClient.getInstance();
         Window window = client.getWindow();

@@ -1,6 +1,8 @@
 package chat.cosmic.client.client;
 
 import net.fabricmc.api.ClientModInitializer;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -23,15 +25,21 @@ import org.lwjgl.glfw.GLFW;
 import java.io.*;
 import java.util.Properties;
 
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
+
 public class MythicTrackerMod implements ClientModInitializer {
 
     private static int mythicCount = 0;
     private static int godlyCount = 0;
     private static int heroicCount = 0;
+    private static int ArtifactfoundCount = 0;
+    private static int SUNKENGEMSCount = 0;
+    private static int skullCount = 0;
     private static boolean isHudVisible = true;
-    private static KeyBinding toggleHudKey;
+    public static KeyBinding toggleHudKey; // Changed to public
     private static boolean wasToggleKeyPressed = false;
     private static final String CONFIG_FILE = "config/mythictracker.properties";
+
 
     public static final Identifier MYTHIC_SOUND_ID = new Identifier("mythictracker", "mythic_sound");
     public static final Identifier GODLY_SOUND_ID = new Identifier("mythictracker", "godly_sound");
@@ -52,9 +60,10 @@ public class MythicTrackerMod implements ClientModInitializer {
                 10, 10,
                 50,
                 12,
-                3
+                7
         );
         UniversalGuiMover.trackHudContainer("mythicTrackerHud", hudContainer);
+
 
         toggleHudKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "Fishing Hud Toggle",
@@ -62,6 +71,27 @@ public class MythicTrackerMod implements ClientModInitializer {
                 GLFW.GLFW_KEY_F13,
                 "Island"
         ));
+
+
+        ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
+            dispatcher.register(
+                    ClientCommandManager.literal("fish")
+                            .then(literal("reset")
+                                    .executes(context -> {
+                                        mythicCount = 0;
+                                        godlyCount = 0;
+                                        heroicCount = 0;
+                                        ArtifactfoundCount = 0;
+                                        skullCount = 0;
+
+                                        MinecraftClient client = MinecraftClient.getInstance();
+                                        if (client.player != null) {
+                                            client.player.sendMessage(Text.literal("§aAll fishing counters have been reset!"), false);
+                                        }
+                                        return 1;
+                                    })
+                            ));
+        });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             boolean isTogglePressed = toggleHudKey.isPressed();
@@ -76,15 +106,37 @@ public class MythicTrackerMod implements ClientModInitializer {
             String msg = message.getString();
             MinecraftClient client = MinecraftClient.getInstance();
 
-            if (msg.contains("Mythic Treasure")) {
-                mythicCount++;
-                playSound(client, MYTHIC_SOUND);
-            } else if (msg.contains("Godly Treasure")) {
-                godlyCount++;
-                playSound(client, GODLY_SOUND);
-            } else if (msg.contains("Heroic Treasure")) {
-                heroicCount++;
-                playSound(client, HEROIC_SOUND);
+            // Skip if the message is from a player (contains "->" or "[Player]")
+            boolean isPlayerMessage = msg.contains("->") || msg.matches(".*\\[.*\\].*"); // Checks for brackets like [Player]
+            boolean isServerMessage = !isPlayerMessage;
+
+            if (isServerMessage || overlay) { // Allow overlay (action bar) or non-player messages
+                if (msg.contains("Mythic Treasure")) {
+                    mythicCount++;
+                    playSound(client, MYTHIC_SOUND);
+                } else if (msg.contains("Godly Treasure")) {
+                    godlyCount++;
+                    playSound(client, GODLY_SOUND);
+                } else if (msg.contains("Heroic Treasure")) {
+                    heroicCount++;
+                    playSound(client, HEROIC_SOUND);
+                } else if (msg.toUpperCase().contains("ARTIFACT FOUND:")) {
+                    ArtifactfoundCount++;
+                    playSound(client, HEROIC_SOUND);
+                } else if (msg.toUpperCase().contains("* SUNKEN GEMS")) {
+                    SUNKENGEMSCount++;
+                    playSound(client, HEROIC_SOUND);
+                } else if (msg.startsWith("+") && msg.contains("Marauder Skull")) {
+                    String[] parts = msg.split(" ");
+                    try {
+                        String numberPart = parts[0].replace("+", "").trim();
+                        int amount = Integer.parseInt(numberPart);
+                        skullCount += amount;
+                        playSound(client, HEROIC_SOUND);
+                    } catch (NumberFormatException e) {
+                        System.err.println("Failed to parse skull amount from: " + msg);
+                    }
+                }
             }
         });
 
@@ -94,7 +146,6 @@ public class MythicTrackerMod implements ClientModInitializer {
             }
         });
     }
-
 
     private boolean isHoldingFishingRod() {
         MinecraftClient client = MinecraftClient.getInstance();
@@ -153,6 +204,9 @@ public class MythicTrackerMod implements ClientModInitializer {
         context.drawText(client.textRenderer, Text.literal("§cGodly: " + godlyCount), 2, 14, 0xFFFFFF, true);
         context.drawText(client.textRenderer, Text.literal("§dHeroic: " + heroicCount), 2, 26, 0xFFFFFF, true);
         context.drawText(client.textRenderer, Text.literal("§5Mythic: " + mythicCount), 2, 38, 0xFFFFFF, true);
+        context.drawText(client.textRenderer, Text.literal("§bArtifact found: " + ArtifactfoundCount), 2, 50, 0xFFFFFF, true);
+        context.drawText(client.textRenderer, Text.literal("§6SUNKEN GEMS: " + SUNKENGEMSCount), 2, 62, 0xFFFFFF, true);
+        context.drawText(client.textRenderer, Text.literal("§6Skulls: " + skullCount), 2, 74, 0xFFFFFF, true);
 
         context.getMatrices().pop();
     }

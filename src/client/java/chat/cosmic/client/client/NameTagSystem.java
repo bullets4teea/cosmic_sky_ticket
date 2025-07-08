@@ -30,11 +30,17 @@ public class NameTagSystem implements ClientModInitializer {
     private final Map<String, Boolean> glowVisibility = new HashMap<>();
 
     public NameTagSystem() {
-        // Initialize all tiers to false
+        // Initialize all tiers for nametags
         String[] tiers = {"basic", "elite", "legendary", "godly", "mythic", "heroic"};
         for (String tier : tiers) {
             String key = tier + "_marauder";
             tierVisibility.put(key, true);
+        }
+
+        // Only initialize higher tiers for glow
+        String[] glowTiers = {"legendary", "godly", "mythic", "heroic"};
+        for (String tier : glowTiers) {
+            String key = tier + "_marauder";
             glowVisibility.put(key, true);
         }
     }
@@ -59,6 +65,12 @@ public class NameTagSystem implements ClientModInitializer {
 
     public boolean shouldGlow(String mobName) {
         String lowerName = mobName.toLowerCase();
+
+        // Explicitly disable glow for basic and elite mobs
+        if (lowerName.contains("basic") || lowerName.contains("elite")) {
+            return false;
+        }
+
         for (Map.Entry<String, Boolean> entry : glowVisibility.entrySet()) {
             String tier = entry.getKey().replace("_", " ");
             if (lowerName.contains(tier) && !entry.getValue()) {
@@ -101,8 +113,14 @@ public class NameTagSystem implements ClientModInitializer {
                 NameTagSystem loaded = GSON.fromJson(reader, NameTagSystem.class);
                 this.tierVisibility.clear();
                 this.tierVisibility.putAll(loaded.tierVisibility);
-                this.glowVisibility.clear();
-                this.glowVisibility.putAll(loaded.glowVisibility);
+
+                // Only load glow settings for applicable tiers
+                for (Map.Entry<String, Boolean> entry : loaded.glowVisibility.entrySet()) {
+                    String key = entry.getKey();
+                    if (this.glowVisibility.containsKey(key)) {
+                        this.glowVisibility.put(key, entry.getValue());
+                    }
+                }
             } catch (IOException e) {
                 System.err.println("Failed to load config: " + e.getMessage());
             }
@@ -156,8 +174,7 @@ public class NameTagSystem implements ClientModInitializer {
     private void registerGlowCommands(CommandDispatcher<FabricClientCommandSource> dispatcher) {
         LiteralArgumentBuilder<FabricClientCommandSource> cmd = ClientCommandManager.literal("glow")
                 .then(ClientCommandManager.literal("toggle")
-                        .then(createGlowTierNode("basic"))
-                        .then(createGlowTierNode("elite"))
+                        // Only include higher tiers for glow toggles
                         .then(createGlowTierNode("legendary"))
                         .then(createGlowTierNode("godly"))
                         .then(createGlowTierNode("mythic"))

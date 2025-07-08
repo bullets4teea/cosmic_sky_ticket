@@ -1,3 +1,4 @@
+// StatusEffectsTracker.java
 package chat.cosmic.client.client;
 
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -24,7 +25,7 @@ public class StatusEffectsTracker {
     private static final Pattern CURSE_PATTERN = Pattern.compile("You have been cursed! You will be siphoned to 1 HP in (\\d+)s!");
     private static final Identifier CURSE_TEXTURE = new Identifier("xpbooster", "textures/gui/curse.png");
     private static final List<ChaoticMessage> chaoticZoneMessages = new ArrayList<>();
-    private static final Pattern CHAOTIC_ZONE_PATTERN = Pattern.compile("(\\w+) has (entered|left) the Chaotic Zone!");
+    private static final Pattern CHAOTIC_ZONE_PATTERN = Pattern.compile("(\\w+) has (entered|left) a Chaotic Zone!");
     private static final Pattern COSMONAUTS_PATTERN = Pattern.compile("\\*\\s*Cosmonauts\\s+are\\s+attempting\\s+to\\s+contact\\s+the\\s+Facility!\\s*\\*");
     private static final int CHAOTIC_MESSAGE_DURATION = 120;
     private static int combatTimer = 0;
@@ -47,6 +48,13 @@ public class StatusEffectsTracker {
     private static int tickCounter = 0;
 
     private static final Identifier ABYSS_DIMENSION = new Identifier("minecraft", "adventure_abyss-0");
+
+    public static void setMuleHudEnabled(Boolean muleHud) {
+    }
+
+    public static void setCombatHudEnabled(Boolean combatHud) {
+
+    }
 
     private static class ChaoticMessage {
         final String message;
@@ -182,10 +190,18 @@ public class StatusEffectsTracker {
 
         if (client.player == null || window == null) return;
 
-        renderChaoticZoneMessages(context, client, window);
-        renderCurseIcon(context, client, window);
-        renderCombatTimer(context, client, window);
-        renderMuleTimer(context, client, window);
+        if (SettingsManager.getToggleSettings().getOrDefault("Chaotic Zone HUD", true)) {
+            renderChaoticZoneMessages(context, client, window);
+        }
+        if (SettingsManager.getToggleSettings().getOrDefault("Curse HUD", true)) {
+            renderCurseIcon(context, client, window);
+        }
+        if (SettingsManager.getToggleSettings().getOrDefault("Combat HUD", true)) {
+            renderCombatTimer(context, client, window);
+        }
+        if (SettingsManager.getToggleSettings().getOrDefault("Mule HUD", true)) {
+            renderMuleTimer(context, client, window);
+        }
     }
 
     private static void renderChaoticZoneMessages(DrawContext context, MinecraftClient client, Window window) {
