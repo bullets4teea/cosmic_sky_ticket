@@ -1,5 +1,6 @@
 package chat.cosmic.client;
 
+import chat.cosmic.client.client.SettingsManager;
 import chat.cosmic.client.client.UniversalGuiMover;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.api.EnvType;
@@ -164,13 +165,16 @@ public class join implements ClientModInitializer {
 
         if (toggleNotificationsKey.wasPressed()) {
             NOTIFICATIONS_ENABLED = !NOTIFICATIONS_ENABLED;
+            SettingsManager.getToggleSettings().put("Show Notifications", NOTIFICATIONS_ENABLED); // Add this
+            SettingsManager.saveSettings(); // Add this
             client.player.sendMessage(Text.of("Notifications " + (NOTIFICATIONS_ENABLED ? "enabled" : "disabled")), false);
-            saveConfig();
         }
+
         if (toggleGuiKey.wasPressed()) {
             GUI_VISIBLE = !GUI_VISIBLE;
+            SettingsManager.getToggleSettings().put("Show Player List", GUI_VISIBLE); // Add this
+            SettingsManager.saveSettings(); // Add this
             client.player.sendMessage(Text.of("GUI " + (GUI_VISIBLE ? "enabled" : "disabled")), false);
-            saveConfig();
         }
 
         if (client.getNetworkHandler() == null) return;

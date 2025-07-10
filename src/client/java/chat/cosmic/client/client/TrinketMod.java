@@ -74,6 +74,8 @@ public class TrinketMod implements ModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (toggleKey.wasPressed()) {
                 hudVisible = !hudVisible;
+                SettingsManager.getToggleSettings().put("Trinket Display HUD", hudVisible);
+                SettingsManager.saveSettings();
                 saveConfig();
             }
         });

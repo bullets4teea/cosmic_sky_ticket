@@ -183,7 +183,12 @@ public class ChestTrackerMod implements ClientModInitializer {
             sendClientMessage("Reset all chest counts, gems, and timer!");
         }
         if (startPauseTimerKey.wasPressed()) handleTimerToggle();
-        if (toggleHudKey.wasPressed()) toggleHudVisibility();
+        if (toggleHudKey.wasPressed()) {
+            hudVisible = !hudVisible;
+            SettingsManager.getToggleSettings().put("Chest Tracker HUD", hudVisible); // Add this
+            SettingsManager.saveSettings();
+            sendClientMessage("HUD " + (hudVisible ? "enabled" : "disabled"));
+        }
 
         if (showSysView && System.currentTimeMillis() > sysViewEndTime) {
             showSysView = false;

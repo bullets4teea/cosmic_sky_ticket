@@ -31,6 +31,8 @@ public class HighlightSearchMod implements ClientModInitializer {
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
             while (TOGGLE_SEARCH_KEY.wasPressed()) {
                 isSearchVisible = !isSearchVisible;
+                SettingsManager.getToggleSettings().put("Highlight Search", isSearchVisible); // Add this
+                SettingsManager.saveSettings(); // Add this
                 saveConfig();
             }
         });

@@ -79,6 +79,7 @@ public class SettingsManager {
         setDefaultIfMissing("Players per Column", 15f);
         setDefaultIfMissing("Damage Numbers", true);
         setDefaultIfMissing("Highlight Search", true);
+        setDefaultIfMissing("Mythic Fishing HUD", true);
 
         setBoosterDefaultIfMissing("Island XP Booster", true);
         setBoosterDefaultIfMissing("Treasure Chance Booster", true);
@@ -261,6 +262,7 @@ public class SettingsManager {
         StatusEffectsTracker.setMuleHudEnabled(toggleSettings.getOrDefault("Mule HUD", true));
         DamageDisplayMod.enabled = toggleSettings.getOrDefault("Damage Numbers", true);
         HighlightSearchMod.isSearchVisible = toggleSettings.getOrDefault("Highlight Search", true);
+        MythicTrackerMod.isHudVisible = toggleSettings.getOrDefault("Mythic Fishing HUD", true);
 
         // Apply mob settings to NameTagSystem
         String[] mobTiers = {"basic", "elite", "legendary", "godly", "mythic", "heroic"};

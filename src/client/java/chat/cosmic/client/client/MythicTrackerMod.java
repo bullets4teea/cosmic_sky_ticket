@@ -35,7 +35,7 @@ public class MythicTrackerMod implements ClientModInitializer {
     private static int ArtifactfoundCount = 0;
     private static int SUNKENGEMSCount = 0;
     private static int skullCount = 0;
-    private static boolean isHudVisible = true;
+    public static boolean isHudVisible = true;
     public static KeyBinding toggleHudKey; // Changed to public
     private static boolean wasToggleKeyPressed = false;
     private static final String CONFIG_FILE = "config/mythictracker.properties";
@@ -97,6 +97,8 @@ public class MythicTrackerMod implements ClientModInitializer {
             boolean isTogglePressed = toggleHudKey.isPressed();
             if (isTogglePressed && !wasToggleKeyPressed) {
                 isHudVisible = !isHudVisible;
+                SettingsManager.getToggleSettings().put("Mythic Fishing HUD", isHudVisible); // Add this
+                SettingsManager.saveSettings(); // Add this
                 saveConfig();
             }
             wasToggleKeyPressed = isTogglePressed;

@@ -74,6 +74,8 @@ public class Amor implements ClientModInitializer {
 
         while (toggleKeybind.wasPressed()) {
             enabled = !enabled;
+            SettingsManager.getToggleSettings().put("Armor Durability Alerts", enabled); // Add this
+            SettingsManager.saveSettings();
             client.player.sendMessage(Text.of(enabled ? "§aDurability alerts enabled" : "§cDurability alerts disabled"), true);
         }
 
