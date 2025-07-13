@@ -9,8 +9,8 @@
     "HandledScreenMixin",
     "InventorySlotMixin",
     "LivingEntityRendererMixin",
-    "MixinClientPlayerInteractionManager",
-    "ArmorFeatureRendererMixin"
+    "MixinClientPlayerEntity",
+    "MixinClientPlayerInteractionManager"
   ],
   "injectors": {
     "defaultRequire": 1
