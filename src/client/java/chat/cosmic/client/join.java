@@ -187,38 +187,13 @@ public class join implements ClientModInitializer {
         if (!newDimension.equals(currentDimension) && !currentDimension.isEmpty()) {
             isChangingDimension = true;
             dimensionChangeTime = System.currentTimeMillis();
+            onlinePlayers.clear(); // Reset player tracking on dimension change
         }
         currentDimension = newDimension;
 
+        // Simplified dimension change cooldown
         if (isChangingDimension && (System.currentTimeMillis() - dimensionChangeTime > DIMENSION_CHANGE_COOLDOWN)) {
             isChangingDimension = false;
-            if (!isRestrictedDimension() && client.getNetworkHandler() != null) {
-                Set<String> newPlayers = new HashSet<>();
-                List<String> displayNames = new ArrayList<>();
-
-                for (PlayerListEntry entry : client.getNetworkHandler().getPlayerList()) {
-                    String username = entry.getProfile().getName().toLowerCase();
-                    String displayName = entry.getProfile().getName();
-                    if (!isIgnored(username) && isValidPlayer(username) && !username.equalsIgnoreCase(client.player.getName().getString())) {
-                        newPlayers.add(username);
-                        displayNames.add(displayName);
-                    }
-                }
-                onlinePlayers = newPlayers;
-
-                if (!displayNames.isEmpty()) {
-                    Collections.sort(displayNames);
-                    String playerList = String.join(", ", displayNames);
-                    client.player.sendMessage(Text.of("------------------------------------------"), false);
-                    client.player.sendMessage(Text.literal("§6§l" + displayNames.size() + " players in this world:"), false);
-                    client.player.sendMessage(Text.literal("§6§l" + playerList), false);
-                    client.player.sendMessage(Text.of("------------------------------------------"), false);
-                } else {
-                    client.player.sendMessage(Text.of("------------------------------------------"), false);
-                    client.player.sendMessage(Text.literal("§6§lNo other players in this world"), false);
-                    client.player.sendMessage(Text.of("------------------------------------------"), false);
-                }
-            }
         }
 
         if (isChangingDimension || isRestrictedDimension()) return;
@@ -437,12 +412,9 @@ public class join implements ClientModInitializer {
     }
 
     private boolean isValidPlayer(String username) {
-        return !isRestrictedDimension() &&
-                !username.startsWith("slot_") &&
+        return !username.startsWith("slot_") &&
                 !username.startsWith("minecraft:") &&
-                username.length() >= 3 &&
-                username.length() <= 16 &&
-                username.matches("[a-zA-Z0-9_]+");
+                username.matches("[a-zA-Z0-9_]+"); // Fixed validation
     }
 
     private void toggleIgnoredPlayer(String username) {

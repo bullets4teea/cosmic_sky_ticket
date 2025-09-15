@@ -30,7 +30,8 @@
       "chat.cosmic.client.client.NameTagSystem",
       "chat.cosmic.client.client.ArmorToggleMod",
       "chat.cosmic.client.client.CalculatorMod",
-      "chat.cosmic.client.client.AnnouncementHiderClient"
+      "chat.cosmic.client.client.AnnouncementHiderClient",
+      "chat.cosmic.client.client.TrophyTrackerMod"
 
     ]
   },

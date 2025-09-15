@@ -3,6 +3,7 @@ package chat.cosmic.client.client;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.Window;
+import chat.cosmic.client.client.AnnouncementHiderClient;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -65,6 +66,7 @@ public class SettingsManager {
         if (initialized) return;
         loadSettings();
 
+
         setDefaultIfMissing("Show Notifications", true);
         setDefaultIfMissing("Show Player List", true);
         setDefaultIfMissing("XP Booster HUD", true);
@@ -80,6 +82,7 @@ public class SettingsManager {
         setDefaultIfMissing("Damage Numbers", true);
         setDefaultIfMissing("Highlight Search", true);
         setDefaultIfMissing("Mythic Fishing HUD", true);
+        setDefaultIfMissing("Hide Announcements", true);
 
         setBoosterDefaultIfMissing("Island XP Booster", true);
         setBoosterDefaultIfMissing("Treasure Chance Booster", true);
@@ -250,6 +253,9 @@ public class SettingsManager {
         chat.cosmic.client.join.NOTIFICATIONS_ENABLED = toggleSettings.getOrDefault("Show Notifications", false);
         chat.cosmic.client.join.GUI_VISIBLE = toggleSettings.getOrDefault("Show Player List", false);
         chat.cosmic.client.join.MAX_PLAYERS_PER_COLUMN = sliderSettings.getOrDefault("Players per Column", 15f).intValue();
+        AnnouncementHiderClient.hideAnnouncements = toggleSettings.getOrDefault("Hide Announcements", true);
+
+
 
         XPBoosterMod.setModEnabled(toggleSettings.getOrDefault("XP Booster HUD", true));
         TrinketMod.setModEnabled(toggleSettings.getOrDefault("Trinket Display HUD", true));

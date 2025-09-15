@@ -11,7 +11,8 @@
     "InGameHudMixin",
     "InventorySlotMixin",
     "LivingEntityRendererMixin",
-    "MixinClientPlayerInteractionManager"
+    "MixinClientPlayerInteractionManager",
+    "TrophyMessageMixin"
   ],
   "injectors": {
     "defaultRequire": 1

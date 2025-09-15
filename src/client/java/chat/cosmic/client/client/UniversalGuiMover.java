@@ -132,6 +132,13 @@ public class UniversalGuiMover implements ClientModInitializer {
             settingsButton.y = 5;
         }
 
+        if (scaleUpKey.wasPressed()) {
+            updateScale(0.1f, client);
+        }
+        if (scaleDownKey.wasPressed()) {
+            updateScale(-0.1f, client);
+        }
+
         if (moveGuisKey.wasPressed() && client.currentScreen == null) {
             toggleMovementMode(client);
         }

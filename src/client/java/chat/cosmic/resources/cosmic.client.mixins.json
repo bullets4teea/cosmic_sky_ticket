@@ -9,7 +9,6 @@
     "HandledScreenMixin",
     "InventorySlotMixin",
     "LivingEntityRendererMixin",
-    "MixinClientPlayerEntity",
     "MixinClientPlayerInteractionManager"
   ],
   "injectors": {

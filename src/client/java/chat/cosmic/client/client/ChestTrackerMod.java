@@ -30,6 +30,7 @@ import java.util.regex.Pattern;
 public class ChestTrackerMod implements ClientModInitializer {
     private static final Map<String, Integer> chestCounts = new HashMap<>();
     private static final Map<String, Integer> sysChestCounts = new HashMap<>();
+    private static final Map<String, Integer> questCounts = new HashMap<>();
     private static final Map<String, Integer> tierColors = Map.of(
             "Basic", 0xFFFFFF,
             "Elite", 0x54FCFC,
@@ -47,8 +48,19 @@ public class ChestTrackerMod implements ClientModInitializer {
     private static final Pattern SYS_CHEST_PATTERN = Pattern.compile("\\* (Basic|Elite|Legendary|Godly|Heroic|Mythic) Chest dropped nearby!\\s+\\(System Override\\) \\*");
     private static final Pattern TIRE_SYS_CHEST_PATTERN = Pattern.compile("\\* Tire Chest dropped nearby!\\s+\\(System Override\\) \\*");
     private static final Pattern MAX_GEM_PATTERN = Pattern.compile("\\* \\+1 MAX GEM FOUND \\*");
+    private static final Pattern MINOR_GEM_PATTERN = Pattern.compile(".*Minor (Diamond|Iron|Stone) Gem.*");
+    private static final Pattern MAJOR_GEM_PATTERN = Pattern.compile(".*Major (Diamond|Iron|Stone) Gem.*");
+    private static final Pattern PERFECT_GEM_PATTERN = Pattern.compile(".*Perfect (Diamond|Iron|Stone) Gem.*");
+    private static final Pattern MYSTERY_GEM_PATTERN = Pattern.compile(".*discovers a missed Mystery Gem.*");
+    private static final Pattern MINING_RUSH_GEM_PATTERN = Pattern.compile(".*Mining Rush found you a (Minor|Major|Perfect) (Diamond|Iron|Stone) Gem.*");
+    private static final Pattern QUEST_PATTERN = Pattern.compile(".*Island Quest COMPLETE: (Basic|Elite|Legendary|Godly|Heroic|Mythic).*");
 
-    public static KeyBinding resetKey, toggleHudKey, startPauseTimerKey; // Changed to public
+    // New patterns for gem source tracking
+    private static final Pattern PICKAXE_ATTRIBUTE_PATTERN = Pattern.compile(".*attribute found you a (Minor|Major|Perfect) (Diamond|Iron|Stone) Gem.*");
+    private static final Pattern GEM_FINDER_PATTERN = Pattern.compile(".*Gem Finder \\(.*\\) found you a (Minor|Major|Perfect) (Diamond|Iron|Stone) Gem.*");
+    private static final Pattern DUG_UP_PATTERN = Pattern.compile(".*You've dug up a (Minor|Major|Perfect) (Diamond|Iron|Stone) Gem.*");
+
+    public static KeyBinding resetKey, toggleHudKey, startPauseTimerKey;
     private static boolean hudVisible = true;
     private static final Path CONFIG_PATH = Path.of("config/chesttracker_hud.dat");
     private static long startTime = 0;
@@ -56,9 +68,21 @@ public class ChestTrackerMod implements ClientModInitializer {
     private static boolean isTimerRunning = false;
     private static boolean needsBoundaryCheck = true;
     private static boolean showSysView = false;
+    private static boolean showGemsView = false;
+    private static boolean showQuestView = false;
     private static long sysViewEndTime = 0;
+    private static long gemsViewEndTime = 0;
+    private static long questViewEndTime = 0;
     private static int maxGemCount = 0;
+    private static int minorGemCount = 0;
+    private static int majorGemCount = 0;
+    private static int perfectGemCount = 0;
     private static boolean modEnabled = true;
+
+    // New gem source tracking maps
+    private static final Map<String, Map<String, Integer>> gemSourceCounts = new HashMap<>();
+    private static final String[] GEM_SOURCES = {"Attribute", "Gem Finder", "Mining Rush", "Dug Up", "Mystery"};
+    private static final String[] GEM_TYPES = {"Minor", "Major", "Perfect"};
 
     private static final UniversalGuiMover.HudContainer hudContainer =
             new UniversalGuiMover.HudContainer(10, 100, 120, 9, 8);
@@ -70,6 +94,7 @@ public class ChestTrackerMod implements ClientModInitializer {
     @Override
     public void onInitializeClient() {
         initializeCounts();
+        initializeGemSourceCounts();
         setupKeybinds();
         loadHudPosition();
         UniversalGuiMover.trackHudContainer("chestTrackerHud", hudContainer);
@@ -82,16 +107,29 @@ public class ChestTrackerMod implements ClientModInitializer {
         registerCommands();
     }
 
+    private void initializeGemSourceCounts() {
+        for (String source : GEM_SOURCES) {
+            gemSourceCounts.put(source, new HashMap<>());
+            for (String type : GEM_TYPES) {
+                gemSourceCounts.get(source).put(type, 0);
+            }
+        }
+    }
+
     private void registerCommands() {
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(ClientCommandManager.literal("sys")
                     .executes(this::handleSysCommand));
 
-            // Chest reset command (only resets counts, not timer)
+            dispatcher.register(ClientCommandManager.literal("gems")
+                    .executes(this::handleGemsCommand));
+
+            dispatcher.register(ClientCommandManager.literal("quests")
+                    .executes(this::handleQuestsCommand));
+
             dispatcher.register(ClientCommandManager.literal("chestreset")
                     .executes(this::handleChestResetCommand));
 
-            // Timer control commands
             dispatcher.register(ClientCommandManager.literal("chesttimer")
                     .then(ClientCommandManager.literal("reset")
                             .executes(this::handleTimerResetCommand))
@@ -104,14 +142,34 @@ public class ChestTrackerMod implements ClientModInitializer {
 
     private int handleSysCommand(CommandContext<FabricClientCommandSource> context) {
         showSysView = true;
+        showGemsView = false;
+        showQuestView = false;
         sysViewEndTime = System.currentTimeMillis() + 10000;
         context.getSource().sendFeedback(Text.literal("Showing System Override stats for 10 seconds"));
         return 1;
     }
 
+    private int handleGemsCommand(CommandContext<FabricClientCommandSource> context) {
+        showGemsView = true;
+        showSysView = false;
+        showQuestView = false;
+        gemsViewEndTime = System.currentTimeMillis() + 10000;
+        context.getSource().sendFeedback(Text.literal("Showing Gem Source stats for 10 seconds"));
+        return 1;
+    }
+
+    private int handleQuestsCommand(CommandContext<FabricClientCommandSource> context) {
+        showQuestView = true;
+        showSysView = false;
+        showGemsView = false;
+        questViewEndTime = System.currentTimeMillis() + 10000;
+        context.getSource().sendFeedback(Text.literal("Showing Quest stats for 10 seconds"));
+        return 1;
+    }
+
     private int handleChestResetCommand(CommandContext<FabricClientCommandSource> context) {
         resetCounts();
-        context.getSource().sendFeedback(Text.literal("Reset all chest counts and gems!"));
+        context.getSource().sendFeedback(Text.literal("Reset all chest counts, quests and gems!"));
         return 1;
     }
 
@@ -142,7 +200,10 @@ public class ChestTrackerMod implements ClientModInitializer {
     }
 
     private void initializeCounts() {
-        for (String tier : TIERS) chestCounts.put(tier, 0);
+        for (String tier : TIERS) {
+            chestCounts.put(tier, 0);
+            questCounts.put(tier, 0);
+        }
         for (String tier : SYS_TIERS) sysChestCounts.put(tier, 0);
     }
 
@@ -180,18 +241,19 @@ public class ChestTrackerMod implements ClientModInitializer {
         if (resetKey.wasPressed()) {
             resetCounts();
             resetTimer();
-            sendClientMessage("Reset all chest counts, gems, and timer!");
+            sendClientMessage("Reset all chest counts, quests, gems, and timer!");
         }
         if (startPauseTimerKey.wasPressed()) handleTimerToggle();
-        if (toggleHudKey.wasPressed()) {
-            hudVisible = !hudVisible;
-            SettingsManager.getToggleSettings().put("Chest Tracker HUD", hudVisible); // Add this
-            SettingsManager.saveSettings();
-            sendClientMessage("HUD " + (hudVisible ? "enabled" : "disabled"));
-        }
+        if (toggleHudKey.wasPressed()) toggleHudVisibility();
 
         if (showSysView && System.currentTimeMillis() > sysViewEndTime) {
             showSysView = false;
+        }
+        if (showGemsView && System.currentTimeMillis() > gemsViewEndTime) {
+            showGemsView = false;
+        }
+        if (showQuestView && System.currentTimeMillis() > questViewEndTime) {
+            showQuestView = false;
         }
     }
 
@@ -233,51 +295,140 @@ public class ChestTrackerMod implements ClientModInitializer {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world == null) return false;
         String dimension = client.world.getRegistryKey().getValue().toString();
-        return dimension.contains("minecraft:adventure") || dimension.contains("minecraft:the_nether");
+        return dimension.contains("minecraft:adventure") || dimension.contains("minecraft:the_end");
     }
 
     private boolean isInSkyblockWorld() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.world == null) return false;
         String dimension = client.world.getRegistryKey().getValue().toString();
-        return dimension.contains("skyblock_world");
+        return dimension.contains("skyblock_world") || dimension.contains("minecraft:the_nether");
     }
 
     private boolean isHoldingPickaxe() {
         MinecraftClient client = MinecraftClient.getInstance();
         if (client.player == null) return false;
         ItemStack heldItem = client.player.getMainHandStack();
-        return heldItem.getItem().toString().toLowerCase().contains("pickaxe");
+        String itemName = heldItem.getItem().toString().toLowerCase();
+        return itemName.contains("pickaxe");
+    }
+
+    private boolean isHoldingQuestTool() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+        ItemStack heldItem = client.player.getMainHandStack();
+        String itemName = heldItem.getItem().toString().toLowerCase();
+        return itemName.contains("pickaxe") || itemName.contains("hoe") || itemName.contains("sword");
+    }
+
+    private void addGemToSource(String source, String type) {
+        Map<String, Integer> sourceMap = gemSourceCounts.get(source);
+        if (sourceMap != null) {
+            sourceMap.put(type, sourceMap.getOrDefault(type, 0) + 1);
+        }
     }
 
     private void handleChatMessage(Text message, boolean overlay) {
-        if (overlay) return;
+        String msg = message.getString();
+        MinecraftClient client = MinecraftClient.getInstance();
 
-        String raw = message.getString();
-        String clean = raw.replaceAll("§[0-9a-fk-or]", "").trim();
+        // Skip if the message is from a player (contains "->" or "[Player]")
+        boolean isPlayerMessage = msg.contains("->") || msg.matches(".*\\[.*\\].*"); // Checks for brackets like [Player]
+        boolean isServerMessage = !isPlayerMessage;
 
-        Matcher matcher = CHEST_PATTERN.matcher(clean);
-        Matcher sysMatcher = SYS_CHEST_PATTERN.matcher(clean);
-        Matcher tireSysMatcher = TIRE_SYS_CHEST_PATTERN.matcher(clean);
-        Matcher maxGemMatcher = MAX_GEM_PATTERN.matcher(clean);
+        if (isServerMessage || overlay) { // Allow overlay (action bar) or non-player messages
+            String raw = msg;
+            String clean = raw.replaceAll("§[0-9a-fk-or]", "").trim();
 
-        if (matcher.matches()) {
-            String tier = matcher.group(1);
-            chestCounts.put(tier, chestCounts.getOrDefault(tier, 0) + 1);
-        } else if (sysMatcher.matches()) {
-            String tier = sysMatcher.group(1);
-            sysChestCounts.put(tier, sysChestCounts.getOrDefault(tier, 0) + 1);
-        } else if (tireSysMatcher.matches()) {
-            sysChestCounts.put("Tire", sysChestCounts.getOrDefault("Tire", 0) + 1);
-        } else if (maxGemMatcher.matches() && isInSkyblockWorld() && isHoldingPickaxe()) {
-            maxGemCount++;
+            Matcher matcher = CHEST_PATTERN.matcher(clean);
+            Matcher sysMatcher = SYS_CHEST_PATTERN.matcher(clean);
+            Matcher tireSysMatcher = TIRE_SYS_CHEST_PATTERN.matcher(clean);
+            Matcher maxGemMatcher = MAX_GEM_PATTERN.matcher(clean);
+            Matcher minorMatcher = MINOR_GEM_PATTERN.matcher(clean);
+            Matcher majorMatcher = MAJOR_GEM_PATTERN.matcher(clean);
+            Matcher perfectMatcher = PERFECT_GEM_PATTERN.matcher(clean);
+            Matcher mysteryMatcher = MYSTERY_GEM_PATTERN.matcher(clean);
+            Matcher miningRushMatcher = MINING_RUSH_GEM_PATTERN.matcher(clean);
+            Matcher questMatcher = QUEST_PATTERN.matcher(clean);
+
+            // New matchers for gem source tracking
+            Matcher pickaxeAttributeMatcher = PICKAXE_ATTRIBUTE_PATTERN.matcher(clean);
+            Matcher gemFinderMatcher = GEM_FINDER_PATTERN.matcher(clean);
+            Matcher dugUpMatcher = DUG_UP_PATTERN.matcher(clean);
+
+            if (matcher.matches()) {
+                String tier = matcher.group(1);
+                chestCounts.put(tier, chestCounts.getOrDefault(tier, 0) + 1);
+            } else if (sysMatcher.matches()) {
+                String tier = sysMatcher.group(1);
+                sysChestCounts.put(tier, sysChestCounts.getOrDefault(tier, 0) + 1);
+            } else if (tireSysMatcher.matches()) {
+                sysChestCounts.put("Tire", sysChestCounts.getOrDefault("Tire", 0) + 1);
+            } else if (questMatcher.matches() && isInSkyblockWorld()) {
+                String tier = questMatcher.group(1);
+                questCounts.put(tier, questCounts.getOrDefault(tier, 0) + 1);
+            } else if (maxGemMatcher.matches() && isInSkyblockWorld() && isHoldingPickaxe()) {
+                maxGemCount++;
+            } else if (isInSkyblockWorld() && isHoldingPickaxe()) {
+                // Check for specific gem source patterns first
+                if (pickaxeAttributeMatcher.matches()) {
+                    String gemType = pickaxeAttributeMatcher.group(1);
+                    addGemToSource("Attribute", gemType);
+                    updateGemCounts(gemType);
+                } else if (gemFinderMatcher.matches()) {
+                    String gemType = gemFinderMatcher.group(1);
+                    addGemToSource("Gem Finder", gemType);
+                    updateGemCounts(gemType);
+                } else if (dugUpMatcher.matches()) {
+                    String gemType = dugUpMatcher.group(1);
+                    addGemToSource("Dug Up", gemType);
+                    updateGemCounts(gemType);
+                } else if (miningRushMatcher.matches()) {
+                    String gemType = miningRushMatcher.group(1);
+                    addGemToSource("Mining Rush", gemType);
+                    updateGemCounts(gemType);
+                } else if (mysteryMatcher.matches()) {
+                    addGemToSource("Mystery", "Minor");
+                    minorGemCount++;
+                } else if (minorMatcher.matches()) {
+                    addGemToSource("Dug Up", "Minor");
+                    minorGemCount++;
+                } else if (majorMatcher.matches()) {
+                    addGemToSource("Dug Up", "Major");
+                    majorGemCount++;
+                } else if (perfectMatcher.matches()) {
+                    addGemToSource("Dug Up", "Perfect");
+                    perfectGemCount++;
+                }
+            }
+        }
+    }
+
+    private void updateGemCounts(String gemType) {
+        switch (gemType) {
+            case "Minor" -> minorGemCount++;
+            case "Major" -> majorGemCount++;
+            case "Perfect" -> perfectGemCount++;
         }
     }
 
     private void resetCounts() {
-        for (String tier : TIERS) chestCounts.put(tier, 0);
+        for (String tier : TIERS) {
+            chestCounts.put(tier, 0);
+            questCounts.put(tier, 0);
+        }
         for (String tier : SYS_TIERS) sysChestCounts.put(tier, 0);
         maxGemCount = 0;
+        minorGemCount = 0;
+        majorGemCount = 0;
+        perfectGemCount = 0;
+
+        // Reset gem source counts
+        for (String source : GEM_SOURCES) {
+            for (String type : GEM_TYPES) {
+                gemSourceCounts.get(source).put(type, 0);
+            }
+        }
     }
 
     private void resetTimer() {
@@ -324,7 +475,29 @@ public class ChestTrackerMod implements ClientModInitializer {
         context.drawTextWithShadow(renderer, "Time: " + getElapsedTime(), 2, yPos, 0xFFFFFF);
         yPos += renderer.fontHeight + (int)(padding / scale);
 
-        if (showSysView) {
+        if (showGemsView) {
+            // Show gem source breakdown
+            context.drawTextWithShadow(renderer, "=== Gem Sources ===", 2, yPos, 0xFFD700);
+            yPos += renderer.fontHeight + (int)(padding / scale);
+
+            for (String source : GEM_SOURCES) {
+                Map<String, Integer> sourceMap = gemSourceCounts.get(source);
+                int total = sourceMap.values().stream().mapToInt(Integer::intValue).sum();
+                if (total > 0) {
+                    context.drawTextWithShadow(renderer, source + ": " + total, 2, yPos, 0xFFFFFF);
+                    yPos += renderer.fontHeight + (int)(padding / scale);
+
+                    for (String type : GEM_TYPES) {
+                        int count = sourceMap.get(type);
+                        if (count > 0) {
+                            int color = getGemTypeColor(type);
+                            context.drawTextWithShadow(renderer, "  " + type + ": " + count, 2, yPos, color);
+                            yPos += renderer.fontHeight + (int)(padding / scale);
+                        }
+                    }
+                }
+            }
+        } else if (showSysView) {
             for (String tier : SYS_TIERS) {
                 int count = sysChestCounts.get(tier);
                 if (count > 0) {
@@ -332,7 +505,45 @@ public class ChestTrackerMod implements ClientModInitializer {
                     yPos += renderer.fontHeight + (int)(padding / scale);
                 }
             }
+        } else if (showQuestView) {
+            for (String tier : TIERS) {
+                int count = questCounts.get(tier);
+                if (count > 0) {
+                    context.drawTextWithShadow(renderer, tier + " Quest: " + count, 2, yPos, tierColors.getOrDefault(tier, 0xFFFFFF));
+                    yPos += renderer.fontHeight + (int)(padding / scale);
+                }
+            }
+        } else if (isInSkyblockWorld()) {
+            // Show quest counts always (even if 0) when in skyblock world
+            if (isHoldingQuestTool()) {
+                context.drawTextWithShadow(renderer, "=== Quests ===", 2, yPos, 0xFFD700);
+                yPos += renderer.fontHeight + (int)(padding / scale);
+
+                for (String tier : TIERS) {
+                    context.drawTextWithShadow(renderer, tier + ": " + questCounts.get(tier), 2, yPos, tierColors.getOrDefault(tier, 0xFFFFFF));
+                    yPos += renderer.fontHeight + (int)(padding / scale);
+                }
+            }
+
+            // Show gem counts only when holding a pickaxe
+            if (isHoldingPickaxe()) {
+                context.drawTextWithShadow(renderer, "=== Gems ===", 2, yPos, 0xFFD700);
+                yPos += renderer.fontHeight + (int)(padding / scale);
+
+                context.drawTextWithShadow(renderer, "Minor Gems: " + minorGemCount, 2, yPos, 0xFFFFFF); // White
+                yPos += renderer.fontHeight + (int)(padding / scale);
+
+                context.drawTextWithShadow(renderer, "Major Gems: " + majorGemCount, 2, yPos, 0x54FCFC); // Baby Blue
+                yPos += renderer.fontHeight + (int)(padding / scale);
+
+                context.drawTextWithShadow(renderer, "Perfect Gems: " + perfectGemCount, 2, yPos, 0xFFA500); // Yellow
+                yPos += renderer.fontHeight + (int)(padding / scale);
+
+                context.drawTextWithShadow(renderer, "Max Gems: " + maxGemCount, 2, yPos, 0x800080); // Purple
+                yPos += renderer.fontHeight + (int)(padding / scale);
+            }
         } else if (isInTrackedDimension()) {
+            // Show chest counts in adventure/nether dimensions
             for (String tier : TIERS) {
                 context.drawTextWithShadow(renderer, tier + ": " + chestCounts.get(tier), 2, yPos, tierColors.getOrDefault(tier, 0xFFFFFF));
                 yPos += renderer.fontHeight + (int)(padding / scale);
@@ -343,11 +554,16 @@ public class ChestTrackerMod implements ClientModInitializer {
             yPos += renderer.fontHeight + (int)(padding / scale);
         }
 
-        if (isInSkyblockWorld() && isHoldingPickaxe()) {
-            context.drawTextWithShadow(renderer, "Max Gems: " + maxGemCount, 2, yPos, 0xFFD700);
-        }
-
         context.getMatrices().pop();
+    }
+
+    private int getGemTypeColor(String type) {
+        return switch (type) {
+            case "Minor" -> 0xFFFFFF;  // White
+            case "Major" -> 0x54FCFC;  // Baby Blue
+            case "Perfect" -> 0xFFA500; // Orange
+            default -> 0xFFFFFF;
+        };
     }
 
     private void saveHudPosition() {
