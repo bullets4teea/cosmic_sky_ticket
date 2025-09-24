@@ -44,10 +44,10 @@ public class TrophyTrackerMod implements ClientModInitializer {
         System.out.println("TrophyTracker client mod initialized!");
 
         openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "key.trophytracker.opengui",
+                "trophytracker",
                 InputUtil.Type.KEYSYM,
                 GLFW.GLFW_KEY_P,
-                "category.trophytracker"
+                "Island"
         ));
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
