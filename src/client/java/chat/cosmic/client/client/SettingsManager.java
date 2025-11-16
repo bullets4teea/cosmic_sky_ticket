@@ -26,6 +26,7 @@ public class SettingsManager {
     private static final Map<String, Boolean> boosterToggleSettings = new LinkedHashMap<>();
     private static final Map<String, Boolean> mobNameTagSettings = new LinkedHashMap<>();
     private static final Map<String, Boolean> mobGlowSettings = new LinkedHashMap<>();
+    private static final Map<String, Boolean> petToggleSettings = new LinkedHashMap<>();
 
     private static final Map<String, Integer> trinketThresholdSettings = new LinkedHashMap<>();
     private static final Map<String, Integer> trinketCriticalSettings = new LinkedHashMap<>();
@@ -100,6 +101,7 @@ public class SettingsManager {
         setDefaultIfMissing("Search Bar", true);
         setDefaultIfMissing("Mythic Fishing HUD", true);
         setDefaultIfMissing("Hide Quest Announcements", true);
+        setDefaultIfMissing("Pet Active Effects HUD", true);
 
         setBoosterDefaultIfMissing("Island Xp Booster", true);
         setBoosterDefaultIfMissing("Treasure Chance Booster", true);
@@ -116,6 +118,26 @@ public class SettingsManager {
             if (!tier.equals("basic") && !tier.equals("elite")) {
                 setDefaultIfMissing("Mob " + tier + " Glow", true);
             }
+        }
+
+        // Initialize pet settings
+        String[] pets = {
+                "Battle Pig Pet",
+                "Miner Matt Pet",
+                "Slayer Sam Pet",
+                "Chaos Cow Pet",
+                "Blacksmith Brandon Pet",
+                "Fisherman Fred Pet",
+                "Alchemist Alex Pet",
+                "Blood Sheep Pet",
+                "Merchant Pet",
+                "Dire Wolf Pet",
+                "Void Chicken Pet",
+                "Loot Llama Pet",
+                "Barry Bee Pet"
+        };
+        for (String pet : pets) {
+            setPetDefaultIfMissing("Pet " + pet, true);
         }
 
         // Updated keybind list to use centralized KeyBinds
@@ -192,6 +214,12 @@ public class SettingsManager {
         }
     }
 
+    private static void setPetDefaultIfMissing(String name, boolean defaultValue) {
+        if (!petToggleSettings.containsKey(name)) {
+            petToggleSettings.put(name, defaultValue);
+        }
+    }
+
     public static void loadSettings() {
         try {
             if (Files.exists(CONFIG_PATH)) {
@@ -212,6 +240,10 @@ public class SettingsManager {
                         String settingName = key.substring(8);
                         boolean value = Boolean.parseBoolean(props.getProperty(key));
                         boosterToggleSettings.put(settingName, value);
+                    } else if (key.startsWith("pet_")) {
+                        String settingName = key.substring(4);
+                        boolean value = Boolean.parseBoolean(props.getProperty(key));
+                        petToggleSettings.put(settingName, value);
                     }
                 }
             }
@@ -233,6 +265,10 @@ public class SettingsManager {
 
         for (Map.Entry<String, Boolean> entry : boosterToggleSettings.entrySet()) {
             props.setProperty("booster_" + entry.getKey(), entry.getValue().toString());
+        }
+
+        for (Map.Entry<String, Boolean> entry : petToggleSettings.entrySet()) {
+            props.setProperty("pet_" + entry.getKey(), entry.getValue().toString());
         }
 
         try {
@@ -330,5 +366,9 @@ public class SettingsManager {
 
     public static Map<String, Boolean> getBoosterToggleSettings() {
         return boosterToggleSettings;
+    }
+
+    public static Map<String, Boolean> getPetToggleSettings() {
+        return petToggleSettings;
     }
 }

@@ -15,17 +15,18 @@ public class PetManager {
         // Initialize all pets with their cooldown durations in milliseconds
         petCooldowns.put("Loot Llama Pet", 24L * 60 * 60 * 1000); // 24 hours
         petCooldowns.put("Battle Pig Pet", 60L * 60 * 1000); // 60 minutes
-        petCooldowns.put("Miner Matt Pet", 10L * 60 * 1000); // 10 minutes
+        petCooldowns.put("Miner Matt Pet", 15L * 60 * 1000); // 15 minutes (updated)
         petCooldowns.put("Slayer Sam Pet", 15L * 60 * 1000); // 15 minutes
         petCooldowns.put("Chaos Cow Pet", 60L * 60 * 1000); // 60 minutes
         petCooldowns.put("Blacksmith Brandon Pet", 20L * 60 * 1000); // 20 minutes
         petCooldowns.put("Fisherman Fred Pet", 10L * 60 * 1000); // 10 minutes
         petCooldowns.put("Alchemist Alex Pet", 8L * 60 * 1000); // 8 minutes
-        petCooldowns.put("Blood Sheep Pet", 60L * 60 * 1000);; // 60 minutes
+        petCooldowns.put("Blood Sheep Pet", 60L * 60 * 1000); // 60 minutes
         petCooldowns.put("Merchant Pet", 15L * 60 * 1000); // 15 minutes
         petCooldowns.put("Dire Wolf Pet", 15L * 60 * 1000); // 15 minutes
         petCooldowns.put("Void Chicken Pet", 60L * 60 * 1000); // 60 minutes
         petCooldowns.put("Barry Bee Pet", 3L * 60 * 60 * 1000);
+        petCooldowns.put("Farmer Bob Pet", 15L * 60 * 1000); // 15 minutes (new)
     }
 
     public static boolean isPet(ItemStack stack) {
@@ -44,6 +45,7 @@ public class PetManager {
 
         String displayName = null;
 
+        // First try to get name from custom name (display)
         if (stack.hasCustomName()) {
             Text displayNameText = stack.getName();
             displayName = displayNameText.getString();
@@ -52,19 +54,24 @@ public class PetManager {
             if (nbt != null && nbt.contains("display")) {
                 NbtCompound display = nbt.getCompound("display");
                 if (display.contains("Name")) {
-                    displayName = display.getString("Name");
+                    // Parse the JSON name string
+                    String nameJson = display.getString("Name");
+                    // Extract text from JSON - simple extraction
+                    displayName = extractTextFromJson(nameJson);
                 }
             }
         }
 
+        // Check if the display name matches any known pet
         if (displayName != null) {
             for (String petName : petCooldowns.keySet()) {
-                if (displayName.contains(petName) && displayName.matches(".*\\[LVL [1-9]0?\\].*")) {
+                if (displayName.contains(petName)) {
                     return petName;
                 }
             }
         }
 
+        // If display name method failed, try petType from NBT
         if (stack.hasNbt()) {
             NbtCompound nbt = stack.getNbt();
             if (nbt.contains("petType")) {
@@ -74,6 +81,24 @@ public class PetManager {
         }
 
         return null;
+    }
+
+    private static String extractTextFromJson(String json) {
+        // Simple JSON extraction - look for "text" fields
+        // This is a basic implementation that works for most pet name formats
+        if (json.contains("\"text\"")) {
+            try {
+                // Extract text between "text":" and the next quote
+                int start = json.indexOf("\"text\":\"") + 8;
+                int end = json.indexOf("\"", start);
+                if (start >= 8 && end > start) {
+                    return json.substring(start, end);
+                }
+            } catch (Exception e) {
+                // If extraction fails, return the original JSON
+            }
+        }
+        return json;
     }
 
     private static String getPetNameFromType(String petType) {
@@ -90,6 +115,8 @@ public class PetManager {
             case "MERCHANT": return "Merchant Pet";
             case "DIRE_WOLF": return "Dire Wolf Pet";
             case "VOID_CHICKEN": return "Void Chicken Pet";
+            case "BARRY_BEE": return "Barry Bee Pet";
+            case "FARMER": return "Farmer Bob Pet"; // Added Farmer Bob Pet
             default: return null;
         }
     }
@@ -103,4 +130,3 @@ public class PetManager {
         return petName != null ? petCooldowns.getOrDefault(petName, 0L) : 0L;
     }
 }
-

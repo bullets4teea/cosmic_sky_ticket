@@ -1,9 +1,13 @@
 package chat.cosmic.client.client.playerheadcooldown;
 
+import chat.cosmic.client.client.SettingsManager;
+import chat.cosmic.client.client.UniversalGuiMover;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.util.Window;
 import net.minecraft.client.util.math.MatrixStack;
 import net.minecraft.item.ItemStack;
+import net.minecraft.nbt.NbtCompound;
 import net.minecraft.text.Text;
 
 import java.util.*;
@@ -11,6 +15,9 @@ import java.util.*;
 public class ActivePetEffectsHud {
     private static final MinecraftClient client = MinecraftClient.getInstance();
     private static final float TEXT_SCALE = 0.75f;
+
+    // HUD Container for positioning
+    private static UniversalGuiMover.HudContainer petHudContainer = null;
 
     // Store active effects and their end times
     private static final Map<String, ActiveEffect> activeEffects = new HashMap<>();
@@ -24,7 +31,7 @@ public class ActivePetEffectsHud {
     static {
         // Initialize effect descriptions
         petEffects.put("Battle Pig Pet", "Damage Boost");
-        petEffects.put("Miner Matt Pet", "Mine Area 3x3x3 of nodes ");
+        petEffects.put("Miner Matt Pet", "Multiply Mining Island Quest progress by 2x");
         petEffects.put("Slayer Sam Pet", "Increase Mob drops");
         petEffects.put("Chaos Cow Pet", "Damage Boost");
         petEffects.put("Blacksmith Brandon Pet", "Better Gear Repairs");
@@ -36,6 +43,7 @@ public class ActivePetEffectsHud {
         petEffects.put("Void Chicken Pet", "Damage Boost");
         petEffects.put("Loot Llama Pet", "Extra Loot Drops");
         petEffects.put("Barry Bee Pet", "Bee hives in a 15 area will gain high chance for workers to gather an empty honeycomb");
+        petEffects.put("Farmer Bob Pet", "Multiply Farming Island Quest progress by 2x"); // Added Farmer Bob Pet
 
         // Initialize effect durations by level (in milliseconds)
         initializeEffectDurations();
@@ -49,18 +57,11 @@ public class ActivePetEffectsHud {
         }
         effectDurations.put("Battle Pig Pet", battlePigDurations);
 
-        // Miner Matt Pet - level 1: 20s, level 10: 1m50s
+        // Miner Matt Pet - level 1: 25s, level 10: 70s (+5s per level)
         Map<Integer, Long> minerMattDurations = new HashMap<>();
-        minerMattDurations.put(1, 20L * 1000);
-        minerMattDurations.put(2, 30L * 1000);
-        minerMattDurations.put(3, 40L * 1000);
-        minerMattDurations.put(4, 50L * 1000);
-        minerMattDurations.put(5, 60L * 1000);
-        minerMattDurations.put(6, 70L * 1000);
-        minerMattDurations.put(7, 80L * 1000);
-        minerMattDurations.put(8, 90L * 1000);
-        minerMattDurations.put(9, 100L * 1000);
-        minerMattDurations.put(10, 110L * 1000);
+        for (int i = 1; i <= 10; i++) {
+            minerMattDurations.put(i, (25L + (i - 1) * 5) * 1000);
+        }
         effectDurations.put("Miner Matt Pet", minerMattDurations);
 
         // Slayer Sam Pet - level 1: 50s, level 10: 2m20s
@@ -134,17 +135,47 @@ public class ActivePetEffectsHud {
             barrybeeDurations.put(i, (10L + i) * 60 * 1000); // 10 + level = duration in minutes
         }
         effectDurations.put("Barry Bee Pet", barrybeeDurations);
+
+        // Farmer Bob Pet - level 1: 25s, level 10: 70s (+5s per level)
+        Map<Integer, Long> farmerBobDurations = new HashMap<>();
+        for (int i = 1; i <= 10; i++) {
+            farmerBobDurations.put(i, (25L + (i - 1) * 5) * 1000);
+        }
+        effectDurations.put("Farmer Bob Pet", farmerBobDurations);
     }
 
-    public static void activatePetEffect(String petName, int level) {
+    public static void activatePetEffect(String petName, int level, ItemStack petStack) {
         long duration = getEffectDuration(petName, level);
         if (duration > 0) {
-            activeEffects.put(petName, new ActiveEffect(petName, level, System.currentTimeMillis() + duration));
+            activeEffects.put(petName, new ActiveEffect(petName, level, System.currentTimeMillis() + duration, petStack.copy()));
+        }
+    }
+
+    public static boolean isPetTypeActive(String petName) {
+        long currentTime = System.currentTimeMillis();
+        ActiveEffect effect = activeEffects.get(petName);
+        return effect != null && currentTime < effect.endTime;
+    }
+
+    public static void initializePetHud() {
+        if (petHudContainer == null && client != null && client.getWindow() != null) {
+            Window window = client.getWindow();
+            int defaultX = window.getScaledWidth() - 140;
+            int defaultY = 30;
+            // Create container: width=130, height per entry=40, max entries=5
+            petHudContainer = new UniversalGuiMover.HudContainer(defaultX, defaultY, 130, 40, 5);
+            UniversalGuiMover.trackHudContainer("pet_hud", petHudContainer);
         }
     }
 
     public static void render(DrawContext context, float tickDelta) {
         if (client.player == null || client.options.hudHidden) return;
+
+        // Initialize container if not done yet (lazy initialization)
+        initializePetHud();
+
+        // Skip if container still not ready
+        if (petHudContainer == null) return;
 
         // Remove expired effects
         long currentTime = System.currentTimeMillis();
@@ -152,12 +183,17 @@ public class ActivePetEffectsHud {
 
         if (activeEffects.isEmpty()) return;
 
-        int screenWidth = client.getWindow().getScaledWidth();
-        int startX = screenWidth - 140; // Right side of screen
-        int startY = 30; // Below coordinates/chat
+        // Use HudContainer position
+        int startX = petHudContainer.x;
+        int startY = petHudContainer.y;
 
         int entryHeight = 40; // Height per effect entry
         List<ActiveEffect> effects = new ArrayList<>(activeEffects.values());
+
+        // Filter effects based on settings
+        effects.removeIf(effect -> !isPetEnabled(effect.petName));
+
+        if (effects.isEmpty()) return;
 
         // Sort by remaining time (soonest to expire first)
         effects.sort(Comparator.comparingLong(e -> e.endTime));
@@ -168,18 +204,27 @@ public class ActivePetEffectsHud {
         }
     }
 
+    private static boolean isPetEnabled(String petName) {
+        // Check if this pet is enabled in settings
+        String settingKey = "Pet " + petName;
+        return SettingsManager.getPetToggleSettings().getOrDefault(settingKey, true);
+    }
+
     private static void renderEffectEntry(DrawContext context, ActiveEffect effect, int x, int y, long currentTime) {
         MatrixStack matrices = context.getMatrices();
 
-        // Background
-        context.fill(x, y, x + 130, y + 38, 0x80000000);
+        // No background - completely transparent!
+        // If you want to add background back, uncomment one of these:
+        // context.fill(x, y, x + 130, y + 38, 0x20000000);  // Super light (12%)
+        // context.fill(x, y, x + 130, y + 38, 0x33000000);  // Light (20%)
+        // context.fill(x, y, x + 130, y + 38, 0x40000000);  // Medium (25%)
 
         matrices.push();
 
-        // Render pet icon
-        renderPetIcon(context, effect.petName, x + 2, y + 2);
+        // Render pet icon (actual player head from ItemStack)
+        renderPetIcon(context, effect.petStack, x + 2, y + 2);
 
-        // Render pet name and level
+        // Render pet name and level (with shadow for readability)
         matrices.push();
         matrices.scale(TEXT_SCALE, TEXT_SCALE, 1f);
         context.drawText(client.textRenderer,
@@ -187,10 +232,10 @@ public class ActivePetEffectsHud {
                 (int)((x + 25) / TEXT_SCALE),
                 (int)((y + 3) / TEXT_SCALE),
                 0xFFFFFF,
-                false);
+                true);  // Shadow enabled
         matrices.pop();
 
-        // Render effect description
+        // Render effect description (with shadow for readability)
         String effectDesc = petEffects.getOrDefault(effect.petName, "Active");
         matrices.push();
         matrices.scale(TEXT_SCALE * 0.8f, TEXT_SCALE * 0.8f, 1f);
@@ -199,10 +244,10 @@ public class ActivePetEffectsHud {
                 (int)((x + 25) / (TEXT_SCALE * 0.8f)),
                 (int)((y + 15) / (TEXT_SCALE * 0.8f)),
                 0xCCCCCC,
-                false);
+                true);  // Shadow enabled
         matrices.pop();
 
-        // Render remaining effect time
+        // Render remaining effect time (with shadow for readability)
         long remaining = effect.endTime - currentTime;
         String timeText = formatTime(remaining);
         matrices.push();
@@ -213,28 +258,25 @@ public class ActivePetEffectsHud {
                 (int)((x + 25) / TEXT_SCALE),
                 (int)((y + 25) / TEXT_SCALE),
                 timeColor,
-                false);
+                true);  // Shadow enabled
         matrices.pop();
 
         matrices.pop();
     }
 
-    private static void renderPetIcon(DrawContext context, String petName, int x, int y) {
-        // Placeholder icon rendering
-        context.fill(x, y, x + 20, y + 20, 0x80FFFFFF);
-        context.drawText(client.textRenderer,
-                Text.literal("P"),
-                x + 6,
-                y + 6,
-                0xFFFFFF,
-                false);
-
-        //
-        // context.drawTexture(new Identifier("playerheadcooldown", "textures/pets/" + getPetTextureName(petName) + ".png"), x, y, 0, 0, 20, 20, 20, 20);
-    }
-
-    private static String getPetTextureName(String petName) {
-        return petName.toLowerCase().replace(" ", "_").replace(" pet", "");
+    private static void renderPetIcon(DrawContext context, ItemStack petStack, int x, int y) {
+        // Render the actual pet ItemStack (shows the player head texture with SkullOwner)
+        if (petStack != null && !petStack.isEmpty()) {
+            context.drawItem(petStack, x, y);
+        } else {
+            // Fallback if ItemStack is null - show "P" with shadow
+            context.drawText(client.textRenderer,
+                    Text.literal("P"),
+                    x + 6,
+                    y + 6,
+                    0xFFFFFF,
+                    true);
+        }
     }
 
     private static long getEffectDuration(String petName, int level) {
@@ -278,6 +320,15 @@ public class ActivePetEffectsHud {
                 return Integer.parseInt(matcher.group(1));
             }
         }
+
+        // Also check NBT for level
+        if (stack.hasNbt()) {
+            NbtCompound nbt = stack.getNbt();
+            if (nbt.contains("level")) {
+                return nbt.getInt("level");
+            }
+        }
+
         return 1; // Default to level 1 if not found
     }
 
@@ -285,11 +336,13 @@ public class ActivePetEffectsHud {
         public final String petName;
         public final int level;
         public final long endTime;
+        public final ItemStack petStack;  // Store the actual pet item
 
-        public ActiveEffect(String petName, int level, long endTime) {
+        public ActiveEffect(String petName, int level, long endTime, ItemStack petStack) {
             this.petName = petName;
             this.level = level;
             this.endTime = endTime;
+            this.petStack = petStack;
         }
     }
 }

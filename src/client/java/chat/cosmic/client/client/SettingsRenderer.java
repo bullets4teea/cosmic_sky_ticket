@@ -17,7 +17,8 @@ public class SettingsRenderer {
         // KEYBINDS("Keybinds", 1), // Temporarily disabled - keeping code for future use
         COMMANDS("Commands", 1), // Changed index from 2 to 1
         HUD_SETTINGS("HUD Settings", 2), // Changed index from 3 to 2
-        MOBS("Mobs", 3); // Changed index from 4 to 3
+        PETS("Pets", 3), // New pet category
+        MOBS("Mobs", 4); // Changed index from 3 to 4
 
         public final String name;
         public final int index;
@@ -89,6 +90,7 @@ public class SettingsRenderer {
             // case KEYBINDS -> renderKeybindsTab(context, client, settingsX, contentY, WIDTH, contentHeight); // Temporarily disabled
             case COMMANDS -> renderCommandsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
             case HUD_SETTINGS -> renderHudSettingsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
+            case PETS -> renderPetsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
             case MOBS -> renderMobsTab(context, client, settingsX, contentY, WIDTH, contentHeight);
         }
     }
@@ -197,6 +199,7 @@ public class SettingsRenderer {
         allHudSettings.put("Chaotic Zone HUD", SettingsManager.getToggleSettings().getOrDefault("Chaotic Zone HUD", true));
         allHudSettings.put("Combat HUD", SettingsManager.getToggleSettings().getOrDefault("Combat HUD", true));
         allHudSettings.put("Mule HUD", SettingsManager.getToggleSettings().getOrDefault("Mule HUD", true));
+        allHudSettings.put("Pet Active Effects HUD", SettingsManager.getToggleSettings().getOrDefault("Pet Active Effects HUD", true));
 
         for (Map.Entry<String, Boolean> entry : SettingsManager.getBoosterToggleSettings().entrySet()) {
             allHudSettings.put("  " + entry.getKey(), entry.getValue());
@@ -233,6 +236,60 @@ public class SettingsRenderer {
 
             if (!mouseOver || !mouseDown) {
                 lastToggleState.put(module, false);
+            }
+
+            optionY += 12;
+        }
+    }
+
+    private static void renderPetsTab(DrawContext context, MinecraftClient client, int x, int y, int width, int height) {
+        int optionY = y + 10;
+
+        String[] pets = {
+                "Battle Pig Pet",
+                "Miner Matt Pet",
+                "Slayer Sam Pet",
+                "Chaos Cow Pet",
+                "Blacksmith Brandon Pet",
+                "Fisherman Fred Pet",
+                "Alchemist Alex Pet",
+                "Blood Sheep Pet",
+                "Merchant Pet",
+                "Dire Wolf Pet",
+                "Void Chicken Pet",
+                "Loot Llama Pet",
+                "Barry Bee Pet"
+        };
+
+        double mouseX = client.mouse.getX() * client.getWindow().getScaledWidth() / client.getWindow().getWidth();
+        double mouseY = client.mouse.getY() * client.getWindow().getScaledHeight() / client.getWindow().getHeight();
+        boolean mouseDown = GLFW.glfwGetMouseButton(client.getWindow().getHandle(), GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        boolean mousePressed = mouseDown && !SettingsInputHandler.getLastMouseState();
+        SettingsInputHandler.setLastMouseState(mouseDown);
+
+        context.drawTextWithShadow(client.textRenderer, "Pet Active Effects Display:", x + 10, optionY, 0x55FFFF);
+        optionY += 12;
+
+        context.drawTextWithShadow(client.textRenderer, "Toggle which pets show on HUD", x + 10, optionY, 0xAAAAAA);
+        optionY += 15;
+
+        for (String pet : pets) {
+            String settingKey = "Pet " + pet;
+            boolean enabled = SettingsManager.getPetToggleSettings().getOrDefault(settingKey, true);
+
+            String displayText = pet + ": " + (enabled ? "§aON" : "§cOFF");
+            context.drawTextWithShadow(client.textRenderer, displayText, x + 20, optionY, 0xFFFFFF);
+
+            boolean mouseOver = mouseX >= x + 20 && mouseX <= x + 200 &&
+                    mouseY >= optionY && mouseY <= optionY + 10;
+
+            if (mouseOver) {
+                context.fill(x + 20, optionY, x + 200, optionY + 10, 0x20FFFFFF);
+                if (mousePressed) {
+                    SettingsInputHandler.saveThresholdsIfEditing();
+                    SettingsManager.getPetToggleSettings().put(settingKey, !enabled);
+                    SettingsManager.saveSettings();
+                }
             }
 
             optionY += 12;

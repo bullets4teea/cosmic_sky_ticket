@@ -2,10 +2,12 @@
   "schemaVersion": 1,
   "id": "cosmic_v2",
   "version": "${version}",
-  "name": "cosmic",
+  "name": "cosmic sky v17",
   "description": "cosmic sky mod",
   "authors": ["bullets4s"],
-  "contact": {},
+  "contact": {
+    "discord": "https://discord.gg/zPREHEfr6M"
+  },
   "license": "All-Rights-Reserved",
   "icon": "assets/untitled20/icon.png",
   "environment": "client",

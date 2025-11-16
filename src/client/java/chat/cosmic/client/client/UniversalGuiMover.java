@@ -1,4 +1,3 @@
-
 package chat.cosmic.client.client;
 
 import chat.cosmic.client.client.KeyBinds.KeyBinds;
@@ -304,6 +303,11 @@ public class UniversalGuiMover implements ClientModInitializer {
         // Special case for trinket display
         if ("trinket_display".equals(containerId)) {
             return toggleSettings.getOrDefault("Trinket Display HUD", true);
+        }
+
+        // Special case for pet HUD
+        if ("pet_hud".equals(containerId)) {
+            return toggleSettings.getOrDefault("Pet Active Effects HUD", true);
         }
 
         if (toggleSettings.containsKey(containerId + " HUD")) {
