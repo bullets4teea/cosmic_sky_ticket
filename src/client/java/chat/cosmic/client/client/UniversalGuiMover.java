@@ -1,5 +1,14 @@
 package chat.cosmic.client.client;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.Properties;
+
+import org.lwjgl.glfw.GLFW;
+
 import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
@@ -10,15 +19,6 @@ import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.util.Window;
 import net.minecraft.text.Text;
-import org.lwjgl.glfw.GLFW;
-
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
 
 public class UniversalGuiMover implements ClientModInitializer {
 
@@ -135,8 +135,8 @@ public class UniversalGuiMover implements ClientModInitializer {
         }
 
         if (isMovementMode) {
-            settingsButton.x = window.getScaledWidth() - settingsButton.getScaledWidth() - 5;
-            settingsButton.y = 5;
+            settingsButton.x = (window.getScaledWidth() - settingsButton.getScaledWidth()) / 2;
+            settingsButton.y = (window.getScaledHeight() - settingsButton.getScaledHeight()) / 2;
         }
 
         if (KeyBinds.getScaleUp().wasPressed()) {
@@ -267,7 +267,7 @@ public class UniversalGuiMover implements ClientModInitializer {
             }
 
             HudContainer button = getHudContainer("settings_button");
-            if (button != null) {
+            if (button != null && !SettingsManager.isSettingsOpen()) {
                 context.fill(button.x, button.y, button.x + button.getScaledWidth(), button.y + button.getScaledHeight(), 0x55000000);
                 context.drawCenteredTextWithShadow(client.textRenderer, Text.of("Settings"),
                         button.x + button.getScaledWidth()/2, button.y + 6, 0xFFFFFF);
@@ -295,19 +295,48 @@ public class UniversalGuiMover implements ClientModInitializer {
         Map<String, Boolean> toggleSettings = SettingsManager.getToggleSettings();
         Map<String, Boolean> boosterToggleSettings = SettingsManager.getBoosterToggleSettings();
 
-        // Check if it's a boss bar
+
         if ("Marauder Bar".equals(containerId) || "Island Quest Bar".equals(containerId)) {
             return boosterToggleSettings.getOrDefault(containerId, true);
         }
 
-        // Special case for trinket display
+
         if ("trinket_display".equals(containerId)) {
             return toggleSettings.getOrDefault("Trinket Display HUD", true);
         }
 
-        // Special case for pet HUD
+
         if ("pet_hud".equals(containerId)) {
             return toggleSettings.getOrDefault("Pet Active Effects HUD", true);
+        }
+
+
+        if ("skyblockProgressTracker".equals(containerId)) {
+            return toggleSettings.getOrDefault("SkyBlock Progress Tracker", true);
+        }
+
+
+        if ("mythicTrackerHud".equals(containerId)) {
+            return toggleSettings.getOrDefault("Mythic Fishing HUD", true);
+        }
+
+
+        if ("unifiedTrackerHud".equals(containerId)) {
+            return toggleSettings.getOrDefault("Chest Tracker HUD", true);
+        }
+
+
+        if ("Curse".equals(containerId)) {
+            return toggleSettings.getOrDefault("Curse HUD", true);
+        }
+        if ("ChaoticZone".equals(containerId)) {
+            return toggleSettings.getOrDefault("Chaotic Zone HUD", true);
+        }
+        if ("Combat".equals(containerId)) {
+            return toggleSettings.getOrDefault("Combat HUD", true);
+        }
+        if ("Mule".equals(containerId)) {
+            return toggleSettings.getOrDefault("Mule HUD", true);
         }
 
         if (toggleSettings.containsKey(containerId + " HUD")) {

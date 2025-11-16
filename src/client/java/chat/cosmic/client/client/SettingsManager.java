@@ -1,20 +1,25 @@
 package chat.cosmic.client.client;
 
-import chat.cosmic.client.client.KeyBinds.KeyBinds;
-import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.Window;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.UUID;
+
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
+import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.option.KeyBinding;
+import net.minecraft.client.util.Window;
 
 public class SettingsManager {
-    private static final Path CONFIG_PATH = Paths.get("config", "untitled20_settings.properties");
+    private static final Path CONFIG_PATH = Paths.get("config", "cosmic_mod.properties");
     private static boolean settingsOpen = false;
     private static boolean initialized = false;
 
@@ -102,6 +107,7 @@ public class SettingsManager {
         setDefaultIfMissing("Mythic Fishing HUD", true);
         setDefaultIfMissing("Hide Quest Announcements", true);
         setDefaultIfMissing("Pet Active Effects HUD", true);
+        setDefaultIfMissing("SkyBlock Progress Tracker", true);
 
         setBoosterDefaultIfMissing("Island Xp Booster", true);
         setBoosterDefaultIfMissing("Treasure Chance Booster", true);
@@ -325,6 +331,7 @@ public class SettingsManager {
         DamageDisplayMod.enabled = toggleSettings.getOrDefault("Damage Intercaters", true);
         HighlightSearchMod.isSearchVisible = toggleSettings.getOrDefault("Highlight Search", true);
         ChestTrackerMod.setHudEnabled(toggleSettings.getOrDefault("Mythic Fishing HUD", true));
+        SkyBlockProgressTracker.setHudEnabled(toggleSettings.getOrDefault("SkyBlock Progress Tracker", true));
 
         // Apply mob settings to NameTagSystem
         String[] mobTiers = {"basic", "elite", "legendary", "godly", "mythic", "heroic"};

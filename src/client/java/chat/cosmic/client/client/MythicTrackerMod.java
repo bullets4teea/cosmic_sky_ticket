@@ -1,8 +1,17 @@
 package chat.cosmic.client.client;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.InputStream;
+import java.io.OutputStream;
+import java.util.Properties;
+
 import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
+import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
@@ -19,11 +28,6 @@ import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
 
-import java.io.*;
-import java.util.Properties;
-
-import static net.fabricmc.fabric.api.client.command.v2.ClientCommandManager.literal;
-
 public class MythicTrackerMod implements ClientModInitializer {
 
     private static int mythicCount = 0;
@@ -34,7 +38,7 @@ public class MythicTrackerMod implements ClientModInitializer {
     private static int skullCount = 0;
     public static boolean isHudVisible = true;
     private static boolean wasToggleKeyPressed = false;
-    private static final String CONFIG_FILE = "config/mythictracker.properties";
+    private static final String CONFIG_FILE = "config/cosmic_trackers.properties";
 
     public static final Identifier MYTHIC_SOUND_ID = new Identifier("mythictracker", "mythic_sound");
     public static final Identifier GODLY_SOUND_ID = new Identifier("mythictracker", "godly_sound");
@@ -152,7 +156,13 @@ public class MythicTrackerMod implements ClientModInitializer {
             try (InputStream input = new FileInputStream(CONFIG_FILE)) {
                 Properties prop = new Properties();
                 prop.load(input);
-                isHudVisible = Boolean.parseBoolean(prop.getProperty("hudVisible", "true"));
+                isHudVisible = Boolean.parseBoolean(prop.getProperty("mythic.hudVisible", "true"));
+                mythicCount = Integer.parseInt(prop.getProperty("mythic.count", "0"));
+                godlyCount = Integer.parseInt(prop.getProperty("godly.count", "0"));
+                heroicCount = Integer.parseInt(prop.getProperty("heroic.count", "0"));
+                ArtifactfoundCount = Integer.parseInt(prop.getProperty("artifact.count", "0"));
+                SUNKENGEMSCount = Integer.parseInt(prop.getProperty("sunkengems.count", "0"));
+                skullCount = Integer.parseInt(prop.getProperty("skull.count", "0"));
             } catch (IOException ex) {
                 System.err.println("Could not load config: " + ex.getMessage());
             }
@@ -162,10 +172,22 @@ public class MythicTrackerMod implements ClientModInitializer {
     private void saveConfig() {
         try {
             new File(CONFIG_FILE).getParentFile().mkdirs();
+            Properties prop = new Properties();
+            File configFile = new File(CONFIG_FILE);
+            if (configFile.exists()) {
+                try (InputStream input = new FileInputStream(CONFIG_FILE)) {
+                    prop.load(input);
+                }
+            }
+            prop.setProperty("mythic.hudVisible", Boolean.toString(isHudVisible));
+            prop.setProperty("mythic.count", Integer.toString(mythicCount));
+            prop.setProperty("godly.count", Integer.toString(godlyCount));
+            prop.setProperty("heroic.count", Integer.toString(heroicCount));
+            prop.setProperty("artifact.count", Integer.toString(ArtifactfoundCount));
+            prop.setProperty("sunkengems.count", Integer.toString(SUNKENGEMSCount));
+            prop.setProperty("skull.count", Integer.toString(skullCount));
             try (OutputStream output = new FileOutputStream(CONFIG_FILE)) {
-                Properties prop = new Properties();
-                prop.setProperty("hudVisible", Boolean.toString(isHudVisible));
-                prop.store(output, "Mythic Tracker Config");
+                prop.store(output, "Cosmic Trackers Configuration");
             }
         } catch (IOException ex) {
             System.err.println("Could not save config: " + ex.getMessage());

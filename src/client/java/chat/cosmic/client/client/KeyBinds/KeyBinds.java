@@ -1,9 +1,10 @@
 package chat.cosmic.client.client.KeyBinds;
 
+import org.lwjgl.glfw.GLFW;
+
 import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import org.lwjgl.glfw.GLFW;
 
 public class KeyBinds {
 
@@ -41,6 +42,9 @@ public class KeyBinds {
 
 
     public static KeyBinding toggleBossBars;
+
+
+    public static KeyBinding toggleSkyBlockTracker;
 
     public static void registerKeyBinds() {
 
@@ -156,6 +160,14 @@ public class KeyBinds {
                 GLFW.GLFW_KEY_UNKNOWN,
                 "Island"
         );
+
+
+        toggleSkyBlockTracker = registerKeyBinding(
+                "Toggle SkyBlock Progress Tracker",
+                InputUtil.Type.KEYSYM,
+                GLFW.GLFW_KEY_P,
+                "Island"
+        );
     }
 
     private static KeyBinding registerKeyBinding(String name, InputUtil.Type type, int key, String category) {
@@ -225,5 +237,9 @@ public class KeyBinds {
 
     public static KeyBinding getToggleBossBars() {
         return toggleBossBars;
+    }
+
+    public static KeyBinding getToggleSkyBlockTracker() {
+        return toggleSkyBlockTracker;
     }
 }

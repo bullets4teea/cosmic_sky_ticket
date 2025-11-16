@@ -1,5 +1,23 @@
 package chat.cosmic.client;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Map;
+import java.util.Properties;
+import java.util.Set;
+
+import com.mojang.brigadier.arguments.IntegerArgumentType;
+import com.mojang.brigadier.arguments.StringArgumentType;
+
 import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import chat.cosmic.client.client.SettingsManager;
 import chat.cosmic.client.client.UniversalGuiMover;
@@ -14,17 +32,7 @@ import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
-import com.mojang.brigadier.arguments.StringArgumentType;
-import com.mojang.brigadier.arguments.IntegerArgumentType;
-
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.*;
 
 @Environment(EnvType.CLIENT)
 public class join implements ClientModInitializer {
@@ -37,7 +45,7 @@ public class join implements ClientModInitializer {
     public static int MAX_PLAYERS_PER_COLUMN = 15;
 
     private static final UniversalGuiMover.HudContainer hudContainer = new UniversalGuiMover.HudContainer(10, 10, 100, 40, 1);
-    private static final File configFile = new File("config/untitled20_mod.properties");
+    private static final File configFile = new File("config/cosmic_mod.properties");
 
     private static boolean isChangingDimension = false;
     private static long dimensionChangeTime = 0;
@@ -147,6 +155,9 @@ public class join implements ClientModInitializer {
 
     private void onClientTick(MinecraftClient client) {
         if (client.player == null) return;
+
+        GUI_VISIBLE = SettingsManager.getToggleSettings().getOrDefault("Show Player List", false);
+        NOTIFICATIONS_ENABLED = SettingsManager.getToggleSettings().getOrDefault("Show Notifications", false);
 
         if (KeyBinds.getToggleNotifications().wasPressed()) {
             NOTIFICATIONS_ENABLED = !NOTIFICATIONS_ENABLED;
@@ -262,7 +273,9 @@ public class join implements ClientModInitializer {
     }
 
     private void onHudRender(DrawContext context, float tickDelta) {
-        if (GUI_VISIBLE && !isRestrictedDimension() && MinecraftClient.getInstance().player != null) {
+        if (!GUI_VISIBLE) return;
+
+        if (!isRestrictedDimension() && MinecraftClient.getInstance().player != null) {
             MinecraftClient client = MinecraftClient.getInstance();
             UniversalGuiMover.HudContainer container = UniversalGuiMover.getHudContainer("playerListHud");
             if (container == null) return;

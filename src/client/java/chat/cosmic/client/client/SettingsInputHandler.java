@@ -1,11 +1,10 @@
-// SettingsInputHandler.java
+
 package chat.cosmic.client.client;
 
-import net.minecraft.client.MinecraftClient;
+import org.lwjgl.glfw.GLFW;
+
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.InputUtil;
-import net.minecraft.client.util.Window;
-import org.lwjgl.glfw.GLFW;
 
 public class SettingsInputHandler {
     private static boolean wasClickHandled = false;
@@ -36,11 +35,15 @@ public class SettingsInputHandler {
             return false;
         }
 
-        Window window = MinecraftClient.getInstance().getWindow();
-        int buttonX = window.getScaledWidth() - 65;
-        int buttonY = 5;
-        int buttonWidth = 60;
-        int buttonHeight = 20;
+        UniversalGuiMover.HudContainer button = UniversalGuiMover.getHudContainer("settings_button");
+        if (button == null) {
+            return false;
+        }
+
+        int buttonX = button.x;
+        int buttonY = button.y;
+        int buttonWidth = button.getScaledWidth();
+        int buttonHeight = button.getScaledHeight();
 
         boolean overButton = mouseX >= buttonX && mouseX <= buttonX + buttonWidth &&
                 mouseY >= buttonY && mouseY <= buttonY + buttonHeight;
@@ -75,7 +78,7 @@ public class SettingsInputHandler {
     }
 
     public static void handleCharInput(char character) {
-        // Character input not needed for keybinds
+
     }
 
     public static void startEditingKeybind(String keybindName) {

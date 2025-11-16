@@ -1,5 +1,16 @@
 package chat.cosmic.client.client;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Properties;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
 import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
@@ -10,21 +21,11 @@ import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Properties;
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.List;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 public class TrinketMod implements ModInitializer {
     private static final Pattern CHARGE_PATTERN = Pattern.compile(".*\\((\\d+)\\)");
     private static final String HUD_ID = "trinket_display";
-    private static final Path CONFIG_PATH = Paths.get("config", "trinket_display.properties");
+    private static final Path CONFIG_PATH = Paths.get("config", "cosmic_trackers.properties");
     private UniversalGuiMover.HudContainer hudContainer;
     private boolean hudVisible = true;
     private static boolean modEnabled = true;
@@ -72,7 +73,7 @@ public class TrinketMod implements ModInitializer {
             if (Files.exists(CONFIG_PATH)) {
                 Properties props = new Properties();
                 props.load(Files.newInputStream(CONFIG_PATH));
-                hudVisible = Boolean.parseBoolean(props.getProperty("visible", "true"));
+                hudVisible = Boolean.parseBoolean(props.getProperty("trinket.visible", "true"));
             }
         } catch (IOException e) {
             e.printStackTrace();
@@ -82,9 +83,12 @@ public class TrinketMod implements ModInitializer {
     private void saveConfig() {
         try {
             Properties props = new Properties();
-            props.setProperty("visible", String.valueOf(hudVisible));
+            if (Files.exists(CONFIG_PATH)) {
+                props.load(Files.newInputStream(CONFIG_PATH));
+            }
+            props.setProperty("trinket.visible", String.valueOf(hudVisible));
             Files.createDirectories(CONFIG_PATH.getParent());
-            props.store(Files.newOutputStream(CONFIG_PATH), "Trinket Display Mod Configuration");
+            props.store(Files.newOutputStream(CONFIG_PATH), "Cosmic Trackers Configuration");
         } catch (IOException e) {
             e.printStackTrace();
         }

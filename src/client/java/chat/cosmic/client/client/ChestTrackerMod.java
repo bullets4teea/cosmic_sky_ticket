@@ -161,16 +161,6 @@ public class ChestTrackerMod implements ClientModInitializer {
                         return 1;
                     }));
 
-            dispatcher.register(ClientCommandManager.literal("quests")
-                    .executes(ctx -> {
-                        showQuestView = true;
-                        showSysView = false;
-                        showGemsView = false;
-                        questViewEndTime = System.currentTimeMillis() + 10000;
-                        ctx.getSource().sendFeedback(Text.literal("Showing Quest stats for 10 seconds"));
-                        return 1;
-                    }));
-
             dispatcher.register(ClientCommandManager.literal("trackerreset")
                     .executes(ctx -> {
                         resetAllCounts();
@@ -212,7 +202,6 @@ public class ChestTrackerMod implements ClientModInitializer {
 
         if (showSysView && System.currentTimeMillis() > sysViewEndTime) showSysView = false;
         if (showGemsView && System.currentTimeMillis() > gemsViewEndTime) showGemsView = false;
-        if (showQuestView && System.currentTimeMillis() > questViewEndTime) showQuestView = false;
     }
 
     private void handleBoundaryCheck(MinecraftClient client) {
@@ -395,13 +384,25 @@ public class ChestTrackerMod implements ClientModInitializer {
                     yPos += renderer.fontHeight + (int)(padding / scale);
                 }
             }
-        } else if (showQuestView) {
+        } else if (isInSkyblockWorld() && isHoldingQuestTool()) {
+
             for (String tier : TIERS) {
                 int count = questCounts.get(tier);
-                if (count > 0) {
-                    context.drawTextWithShadow(renderer, tier + " Quest: " + count, 2, yPos, tierColors.getOrDefault(tier, 0xFFFFFF));
-                    yPos += renderer.fontHeight + (int)(padding / scale);
-                }
+                context.drawTextWithShadow(renderer, tier + " Quest: " + count, 2, yPos, tierColors.getOrDefault(tier, 0xFFFFFF));
+                yPos += renderer.fontHeight + (int)(padding / scale);
+            }
+
+            if (isHoldingPickaxe()) {
+                yPos += (int)(padding / scale);
+                context.drawTextWithShadow(renderer, "=== Gems ===", 2, yPos, 0xFFD700);
+                yPos += renderer.fontHeight + (int)(padding / scale);
+                context.drawTextWithShadow(renderer, "Minor: " + minorGemCount, 2, yPos, 0xFFFFFF);
+                yPos += renderer.fontHeight + (int)(padding / scale);
+                context.drawTextWithShadow(renderer, "Major: " + majorGemCount, 2, yPos, 0x54FCFC);
+                yPos += renderer.fontHeight + (int)(padding / scale);
+                context.drawTextWithShadow(renderer, "Perfect: " + perfectGemCount, 2, yPos, 0xFFA500);
+                yPos += renderer.fontHeight + (int)(padding / scale);
+                context.drawTextWithShadow(renderer, "Max: " + maxGemCount, 2, yPos, 0x800080);
             }
         } else if (isInSkyblockWorld()) {
             if (isHoldingPickaxe()) {
@@ -440,6 +441,34 @@ public class ChestTrackerMod implements ClientModInitializer {
         ItemStack heldItem = client.player.getMainHandStack();
         String itemName = heldItem.getItem().toString().toLowerCase();
         return itemName.contains("pickaxe");
+    }
+
+    private boolean isHoldingAxe() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+        ItemStack heldItem = client.player.getMainHandStack();
+        String itemName = heldItem.getItem().toString().toLowerCase();
+        return itemName.contains("axe");
+    }
+
+    private boolean isHoldingSword() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+        ItemStack heldItem = client.player.getMainHandStack();
+        String itemName = heldItem.getItem().toString().toLowerCase();
+        return itemName.contains("sword");
+    }
+
+    private boolean isHoldingHoe() {
+        MinecraftClient client = MinecraftClient.getInstance();
+        if (client.player == null) return false;
+        ItemStack heldItem = client.player.getMainHandStack();
+        String itemName = heldItem.getItem().toString().toLowerCase();
+        return itemName.contains("hoe");
+    }
+
+    private boolean isHoldingQuestTool() {
+        return isHoldingPickaxe() || isHoldingAxe() || isHoldingSword() || isHoldingHoe();
     }
 
     private boolean isInTrackedDimension() {

@@ -23,6 +23,18 @@ public class ItemStackMixin {
         if (PlayerHeadCooldownMod.isPet(stack)) {
             String petName = PlayerHeadCooldownMod.getPetName(stack);
 
+            // Determine which slot this pet is in
+            int slot = -1;
+            if (hand == Hand.MAIN_HAND) {
+                slot = user.getInventory().selectedSlot;
+            } else {
+                // For offhand, it's slot 40
+                slot = 40;
+            }
+
+            // Track pet usage immediately when clicked
+            PlayerHeadCooldownMod.trackPetUsage(stack, slot);
+
             // Check if pet is on cooldown
             if (PlayerHeadCooldownMod.isOnCooldown(stack)) {
                 if (world.isClient) {
@@ -34,7 +46,7 @@ public class ItemStackMixin {
                 return;
             }
 
-            // Check if another pet of the same type is already active
+            // Check if same pet type is already active
             if (ActivePetEffectsHud.isPetTypeActive(petName)) {
                 if (world.isClient) {
                     user.sendMessage(Text.literal("§cYou already have an active " + petName + "! Wait for it to finish."), true);
@@ -43,8 +55,10 @@ public class ItemStackMixin {
                 return;
             }
 
-            // Let the server handle the activation - we'll detect it from chat messages
-            // This ensures the HUD works regardless of where the player is looking
+            // Start cooldown and track the specific slot
+            if (world.isClient) {
+                PlayerHeadCooldownMod.startCooldown(stack, slot);
+            }
         }
     }
 }
