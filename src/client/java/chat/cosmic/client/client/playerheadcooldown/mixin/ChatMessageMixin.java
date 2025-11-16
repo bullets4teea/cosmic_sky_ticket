@@ -16,17 +16,16 @@ public class ChatMessageMixin {
     private void onChatMessage(Text message, CallbackInfo ci) {
         String messageText = message.getString();
 
-        // Check for pet activation messages (PET: Pet Name [Buff Description])
+
         if (messageText.startsWith("PET:")) {
-            // Extract the pet name from the message
-            // Format: "PET: Dire Wolf [Dire Wolf Buff (5x Mobs Killed per Stack [1m 10s])]"
+
             String petName = extractPetNameFromMessage(messageText);
             if (petName != null) {
                 PlayerHeadCooldownMod.handlePetActivationMessage(petName);
             }
         }
 
-        // Check for cooldown messages
+
         Matcher matcher = PlayerHeadCooldownMod.getCooldownPattern().matcher(messageText);
         if (matcher.find()) {
             int minutes = Integer.parseInt(matcher.group(1));
@@ -38,20 +37,20 @@ public class ChatMessageMixin {
 
     private String extractPetNameFromMessage(String message) {
         try {
-            // Remove "PET: " prefix
+
             String content = message.substring(5).trim();
 
-            // Find the opening bracket
+
             int bracketIndex = content.indexOf('[');
             if (bracketIndex > 0) {
-                // Extract everything before the first bracket
+
                 String petNamePart = content.substring(0, bracketIndex).trim();
 
-                // Map common pet name variations to our internal names
+
                 return mapToInternalPetName(petNamePart);
             }
         } catch (Exception e) {
-            // If extraction fails, try a fallback approach
+
             return extractPetNameFallback(message);
         }
 
@@ -59,8 +58,7 @@ public class ChatMessageMixin {
     }
 
     private String mapToInternalPetName(String petNameFromMessage) {
-        // Map the pet name from the message to our internal pet names
-        // This handles variations in naming between the chat message and our system
+
 
         if (petNameFromMessage.contains("Dire Wolf")) return "Dire Wolf Pet";
         if (petNameFromMessage.contains("Miner Matt")) return "Miner Matt Pet";
@@ -77,12 +75,12 @@ public class ChatMessageMixin {
         if (petNameFromMessage.contains("Loot Llama")) return "Loot Llama Pet";
         if (petNameFromMessage.contains("Barry Bee")) return "Barry Bee Pet";
 
-        // If no match found, try to use the name directly with "Pet" appended
+
         return petNameFromMessage + " Pet";
     }
 
     private String extractPetNameFallback(String message) {
-        // Fallback method: look for known pet names in the message
+
         String[] knownPets = {
                 "Dire Wolf", "Miner Matt", "Farmer Bob", "Battle Pig",
                 "Slayer Sam", "Chaos Cow", "Blacksmith Brandon", "Fisherman Fred",
