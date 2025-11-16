@@ -30,14 +30,14 @@ public class NameTagSystem implements ClientModInitializer {
     public final Map<String, Boolean> glowVisibility = new HashMap<>();
 
     public NameTagSystem() {
-        // Initialize all tiers for nametags
+
         String[] tiers = {"basic", "elite", "legendary", "godly", "mythic", "heroic"};
         for (String tier : tiers) {
             String key = tier + "_marauder";
             tierVisibility.put(key, true);
         }
 
-        // Only initialize higher tiers for glow
+
         String[] glowTiers = {"legendary", "godly", "mythic", "heroic"};
         for (String tier : glowTiers) {
             String key = tier + "_marauder";
@@ -174,7 +174,7 @@ public class NameTagSystem implements ClientModInitializer {
     private void registerGlowCommands(CommandDispatcher<FabricClientCommandSource> dispatcher) {
         LiteralArgumentBuilder<FabricClientCommandSource> cmd = ClientCommandManager.literal("glow")
                 .then(ClientCommandManager.literal("toggle")
-                        // Only include higher tiers for glow toggles
+
                         .then(createGlowTierNode("legendary"))
                         .then(createGlowTierNode("godly"))
                         .then(createGlowTierNode("mythic"))

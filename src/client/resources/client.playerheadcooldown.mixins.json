@@ -1,0 +1,13 @@
+{
+  "required": true,
+  "package": "chat.cosmic.client.client.playerheadcooldown.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "client": [
+    "PlayerHeadCooldownScreenMixin",
+    "ChatMessageMixin",
+    "ItemStackMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

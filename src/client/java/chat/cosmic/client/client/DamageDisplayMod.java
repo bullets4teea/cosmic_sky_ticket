@@ -1,5 +1,6 @@
 package chat.cosmic.client.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.WorldRenderContext;
@@ -52,26 +53,18 @@ public class DamageDisplayMod implements ModInitializer {
     private static final float DEPTH_SPREAD = 0.6f;
     private static final float FRONT_OFFSET = 1.2f;
     private static final float SCALE_FACTOR_PER_ENTRY = 0.5f;
-    private static KeyBinding toggleKey;
 
     @Override
     public void onInitialize() {
         loadConfig();
 
-        toggleKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Toggle Damage Numbers",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_UNKNOWN,
-                "adv"
-        ));
-
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            if (toggleKey.wasPressed()) {
+            if (KeyBinds.getToggleDamageDisplay().wasPressed()) {
                 enabled = !enabled;
-                SettingsManager.getToggleSettings().put("Damage Numbers", enabled);
+                SettingsManager.getToggleSettings().put("Damage Intercaters", enabled);
                 SettingsManager.saveSettings();
                 if (client.player != null) {
-                    client.player.sendMessage(Text.literal("Damage numbers: " + (enabled ? "ON" : "OFF")), true);
+                    client.player.sendMessage(Text.literal("Damage Intercaters: " + (enabled ? "ON" : "OFF")), true);
                 }
             }
 
@@ -90,7 +83,7 @@ public class DamageDisplayMod implements ModInitializer {
                 props.load(Files.newInputStream(CONFIG_PATH));
                 enabled = Boolean.parseBoolean(props.getProperty("enabled", "true"));
             }
-            enabled = SettingsManager.getToggleSettings().getOrDefault("Damage Numbers", true);
+            enabled = SettingsManager.getToggleSettings().getOrDefault("Damage Intercaters", true);
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -102,7 +95,7 @@ public class DamageDisplayMod implements ModInitializer {
             props.setProperty("enabled", String.valueOf(enabled));
             Files.createDirectories(CONFIG_PATH.getParent());
             props.store(Files.newOutputStream(CONFIG_PATH), "Damage Display Mod Configuration");
-            SettingsManager.getToggleSettings().put("Damage Numbers", enabled);
+            SettingsManager.getToggleSettings().put("Damage Intercaters", enabled);
             SettingsManager.saveSettings();
         } catch (IOException e) {
             e.printStackTrace();

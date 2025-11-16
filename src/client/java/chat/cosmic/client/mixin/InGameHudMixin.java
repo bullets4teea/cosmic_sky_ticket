@@ -23,7 +23,8 @@ public class InGameHudMixin {
         }
     }
 
-    // Prevent setting subtitle only if it contains "new island quest"
+
+
     @Inject(method = "setSubtitle", at = @At("HEAD"), cancellable = true, require = 0)
     private void preventSetSubtitle(Text subtitle, CallbackInfo ci) {
         if (AnnouncementHiderClient.hideAnnouncements && subtitle != null) {
@@ -34,5 +35,5 @@ public class InGameHudMixin {
         }
     }
 
-    // Removed the render method injection since we don't want to hide the entire HUD
+
 }

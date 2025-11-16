@@ -1,9 +1,9 @@
 package chat.cosmic.client.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.util.Window;
-import chat.cosmic.client.client.AnnouncementHiderClient;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,6 +66,23 @@ public class SettingsManager {
         if (initialized) return;
         loadSettings();
 
+        if (toggleSettings.containsKey("Damage Numbers")) {
+            toggleSettings.put("Damage Intercaters", toggleSettings.get("Damage Numbers"));
+            toggleSettings.remove("Damage Numbers");
+        }
+
+        if (toggleSettings.containsKey("Highlight Search")) {
+            toggleSettings.put("Search Bar", toggleSettings.get("Highlight Search"));
+            toggleSettings.remove("Highlight Search");
+        }
+        if (toggleSettings.containsKey("Hide Announcements")) {
+            toggleSettings.put("Hide Quest Announcements", toggleSettings.get("Hide Announcements"));
+            toggleSettings.remove("Hide Announcements");
+        }
+        if (toggleSettings.containsKey("Hide Armor")) {
+            toggleSettings.put("Hide Mob Armor", toggleSettings.get("Hide Armor"));
+            toggleSettings.remove("Hide Armor");
+        }
 
         setDefaultIfMissing("Show Notifications", true);
         setDefaultIfMissing("Show Player List", true);
@@ -77,14 +94,14 @@ public class SettingsManager {
         setDefaultIfMissing("Combat HUD", true);
         setDefaultIfMissing("Mule HUD", true);
         setDefaultIfMissing("Armor Durability Alerts", true);
-        setDefaultIfMissing("Hide Armor", false);
+        setDefaultIfMissing("Hide Mob Armor", false);
         setDefaultIfMissing("Players per Column", 15f);
-        setDefaultIfMissing("Damage Numbers", true);
-        setDefaultIfMissing("Highlight Search", true);
+        setDefaultIfMissing("Damage Intercaters", true);
+        setDefaultIfMissing("Search Bar", true);
         setDefaultIfMissing("Mythic Fishing HUD", true);
-        setDefaultIfMissing("Hide Announcements", true);
+        setDefaultIfMissing("Hide Quest Announcements", true);
 
-        setBoosterDefaultIfMissing("Island XP Booster", true);
+        setBoosterDefaultIfMissing("Island Xp Booster", true);
         setBoosterDefaultIfMissing("Treasure Chance Booster", true);
         setBoosterDefaultIfMissing("Ender Pearl", true);
         setBoosterDefaultIfMissing("/feed", true);
@@ -101,17 +118,22 @@ public class SettingsManager {
             }
         }
 
-        keybindList.put("Toggle GUI Movement", UniversalGuiMover.moveGuisKey);
-        keybindList.put("Toggle Notifications", chat.cosmic.client.join.toggleNotificationsKey);
-        keybindList.put("Toggle Player List", chat.cosmic.client.join.toggleGuiKey);
-        keybindList.put("Scale Up", UniversalGuiMover.scaleUpKey);
-        keybindList.put("Scale Down", UniversalGuiMover.scaleDownKey);
-        keybindList.put("Toggle Durability Alerts", Amor.toggleKeybind);
-        keybindList.put("Toggle Chest HUD", ChestTrackerMod.toggleHudKey);
-        keybindList.put("Reset Chest Tracker", ChestTrackerMod.resetKey);
-        keybindList.put("Start/Pause Chest Timer", ChestTrackerMod.startPauseTimerKey);
-        keybindList.put("Toggle Fishing HUD", MythicTrackerMod.toggleHudKey);
-        keybindList.put("Toggle Search", HighlightSearchMod.TOGGLE_SEARCH_KEY);
+        // Updated keybind list to use centralized KeyBinds
+        keybindList.put("Toggle GUI Movement", KeyBinds.getToggleGUIMovement());
+        keybindList.put("Toggle Notifications", KeyBinds.getToggleNotifications());
+        keybindList.put("Toggle Player List", KeyBinds.getTogglePlayerList());
+        keybindList.put("Scale Up", KeyBinds.getScaleUp());
+        keybindList.put("Scale Down", KeyBinds.getScaleDown());
+        keybindList.put("Toggle Durability Alerts", KeyBinds.getToggleDurabilityAlerts());
+        keybindList.put("Toggle Chest HUD", KeyBinds.Chest_tracker_toggle_hud);
+        keybindList.put("Reset Chest Tracker", KeyBinds.Chest_tracker_timer_reset);
+        keybindList.put("Start/Pause Chest Timer", KeyBinds.Chest_tracker_start_pause_timer);
+        keybindList.put("Toggle Fishing HUD", KeyBinds.getToggleFishingHud());
+        keybindList.put("Toggle Search", KeyBinds.getToggleSearch());
+        keybindList.put("Toggle Damage Display", KeyBinds.getToggleDamageDisplay());
+        keybindList.put("Toggle Armor Visibility", KeyBinds.getToggleArmorVisibility());
+        keybindList.put("Toggle Trinket HUD", KeyBinds.trinket_hud_toggle);
+        keybindList.put("Open Trophy Tracker", KeyBinds.TrophyTracker_hud);
 
         commandHelp.add("/pr <name> - Red name");
         commandHelp.add("/pg <name> - Green name");
@@ -128,8 +150,10 @@ public class SettingsManager {
         commandHelp.add("/chesttimer pause - Pause timer");
         commandHelp.add("/sys - Show System Override stats for 10s");
         commandHelp.add("/fish reset - Reset all fishing counters");
+        commandHelp.add("/glow toggle tire");
 
         applySettings();
+        saveSettings();
         initialized = true;
 
         try {
@@ -177,8 +201,7 @@ public class SettingsManager {
                 }
 
                 for (String key : props.stringPropertyNames()) {
-                    if (key.startsWith("toggle_")) {
-                        String settingName = key.substring(7);
+                    if (key.startsWith("toggle_")) {                        String settingName = key.substring(7);
                         boolean value = Boolean.parseBoolean(props.getProperty(key));
                         toggleSettings.put(settingName, value);
                     } else if (key.startsWith("slider_")) {
@@ -255,9 +278,6 @@ public class SettingsManager {
         chat.cosmic.client.join.MAX_PLAYERS_PER_COLUMN = sliderSettings.getOrDefault("Players per Column", 15f).intValue();
         AnnouncementHiderClient.hideAnnouncements = toggleSettings.getOrDefault("Hide Announcements", true);
 
-
-
-        XPBoosterMod.setModEnabled(toggleSettings.getOrDefault("XP Booster HUD", true));
         TrinketMod.setModEnabled(toggleSettings.getOrDefault("Trinket Display HUD", true));
         TrinketMod.setHudEnabled(toggleSettings.getOrDefault("Trinket Display HUD", true));
         ChestTrackerMod.setModEnabled(toggleSettings.getOrDefault("Chest Tracker HUD", true));
@@ -266,9 +286,9 @@ public class SettingsManager {
         ArmorToggleMod.hideArmor = toggleSettings.getOrDefault("Hide Armor", false);
         StatusEffectsTracker.setCombatHudEnabled(toggleSettings.getOrDefault("Combat HUD", true));
         StatusEffectsTracker.setMuleHudEnabled(toggleSettings.getOrDefault("Mule HUD", true));
-        DamageDisplayMod.enabled = toggleSettings.getOrDefault("Damage Numbers", true);
+        DamageDisplayMod.enabled = toggleSettings.getOrDefault("Damage Intercaters", true);
         HighlightSearchMod.isSearchVisible = toggleSettings.getOrDefault("Highlight Search", true);
-        MythicTrackerMod.isHudVisible = toggleSettings.getOrDefault("Mythic Fishing HUD", true);
+        ChestTrackerMod.setHudEnabled(toggleSettings.getOrDefault("Mythic Fishing HUD", true));
 
         // Apply mob settings to NameTagSystem
         String[] mobTiers = {"basic", "elite", "legendary", "godly", "mythic", "heroic"};

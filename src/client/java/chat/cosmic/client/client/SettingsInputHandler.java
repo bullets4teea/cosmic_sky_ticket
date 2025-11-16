@@ -106,6 +106,6 @@ public class SettingsInputHandler {
     }
 
     public static void saveThresholdsIfEditing() {
-        // No longer needed but kept for compatibility
+
     }
 }

@@ -12,7 +12,7 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(InGameHud.class)
 public class TrophyMessageMixin {
 
-    // Intercept action bar messages (above hotbar)
+
     @Inject(method = "setOverlayMessage", at = @At("HEAD"))
     private void onSetOverlayMessage(Text message, boolean tinted, CallbackInfo ci) {
         if (message != null) {

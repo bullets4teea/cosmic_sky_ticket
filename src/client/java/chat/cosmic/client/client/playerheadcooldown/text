@@ -1,0 +1,41 @@
+/give @s minecraft:player_head{display:{Name:'{"text":"Loot Llama Pet [LVL 5]","italic":false}'}, petType:"LOOT_LLAMA"} 1
+Battle Pig Pet (60 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Battle Pig Pet [LVL 3]","italic":false}'}, petType:"BATTLE_PIG"} 1
+Miner Matt Pet (10 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Miner Matt Pet [LVL 7]","italic":false}'}, petType:"MINER_MATT"} 1
+Slayer Sam Pet (15 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Slayer Sam Pet [LVL 4]","italic":false}'}, petType:"SLAYER_SAM"} 1
+Chaos Cow Pet (60 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Chaos Cow Pet [LVL 6]","italic":false}'}, petType:"CHAOS_COW"} 1
+Blacksmith Brandon Pet (20 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Blacksmith Brandon Pet [LVL 2]","italic":false}'}, petType:"BLACKSMITH_BRANDON"} 1
+Fisherman Fred Pet (10 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Fisherman Fred Pet [LVL 8]","italic":false}'}, petType:"FISHERMAN_FRED"} 1
+Alchemist Alex Pet (8 minute cooldown) - Server Format
+/give @s minecraft:player_head{display:{Name:'{"text":"","extra":[{"text":"Alchemist Alex Pet","color":"yellow","bold":true},{"text":" [LVL 2]","color":"gray","bold":false}]}'}, petType:"ALCHEMIST_ALEX", c_iid:32017344757127994L, level:2, lastUsed:0L} 1
+Alchemist Alex Pet (8 minute cooldown) - Simple Format
+/give @s minecraft:player_head{display:{Name:'{"text":"Alchemist Alex Pet [LVL 1]","italic":false}'}, petType:"ALCHEMIST_ALEX"} 1
+Blood Sheep Pet (no cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Blood Sheep Pet [LVL 9]","italic":false}'}, petType:"BLOOD_SHEEP"} 1
+Merchant Pet (15 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Merchant Pet [LVL 5]","italic":false}'}, petType:"MERCHANT"} 1
+Dire Wolf Pet (15 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Dire Wolf Pet [LVL 10]","italic":false}'}, petType:"DIRE_WOLF"} 1
+Void Chicken Pet (60 minute cooldown)
+/give @s minecraft:player_head{display:{Name:'{"text":"Void Chicken Pet [LVL 6]","italic":false}'}, petType:"VOID_CHICKEN"} 1
+All-in-One Command
+If you want to get all pets at once, use this single command:
+/give @s minecraft:player_head{display:{Name:'{"text":"Loot Llama Pet [LVL 5]","italic":false}'}, petType:"LOOT_LLAMA"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Battle Pig Pet [LVL 3]","italic":false}'}, petType:"BATTLE_PIG"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Miner Matt Pet [LVL 7]","italic":false}'}, petType:"MINER_MATT"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Slayer Sam Pet [LVL 4]","italic":false}'}, petType:"SLAYER_SAM"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Chaos Cow Pet [LVL 6]","italic":false}'}, petType:"CHAOS_COW"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Blacksmith Brandon Pet [LVL 2]","italic":false}'}, petType:"BLACKSMITH_BRANDON"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Fisherman Fred Pet [LVL 8]","italic":false}'}, petType:"FISHERMAN_FRED"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Alchemist Alex Pet [LVL 1]","italic":false}'}, petType:"ALCHEMIST_ALEX"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Blood Sheep Pet [LVL 9]","italic":false}'}, petType:"BLOOD_SHEEP"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Merchant Pet [LVL 5]","italic":false}'}, petType:"MERCHANT"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Dire Wolf Pet [LVL 10]","italic":false}'}, petType:"DIRE_WOLF"} 1
+/give @s minecraft:player_head{display:{Name:'{"text":"Void Chicken Pet [LVL 6]","italic":false}'}, petType:"VOID_CHICKEN"} 1
+Notes:
+

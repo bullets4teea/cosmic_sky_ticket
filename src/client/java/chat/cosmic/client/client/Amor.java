@@ -1,5 +1,6 @@
 package chat.cosmic.client.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import com.mojang.brigadier.Command;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
 import com.mojang.brigadier.arguments.StringArgumentType;
@@ -12,20 +13,17 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.font.TextRenderer;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.item.*;
 import net.minecraft.registry.Registries;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
@@ -37,7 +35,6 @@ public class Amor implements ClientModInitializer {
     private final Map<UUID, Integer> playerThresholds = new HashMap<>();
     private final Map<UUID, String> playerSoundPreferences = new HashMap<>();
     public static boolean enabled = true;
-    public static KeyBinding toggleKeybind;
     private final List<ArmorDisplayInfo> lowDurabilityItems = new ArrayList<>();
 
     private static class ArmorDisplayInfo {
@@ -56,25 +53,15 @@ public class Amor implements ClientModInitializer {
     public void onInitializeClient() {
         ClientTickEvents.END_CLIENT_TICK.register(this::onClientTick);
         registerCommands();
-        registerKeybind();
         HudRenderCallback.EVENT.register(this::renderArmorDisplay);
-    }
-
-    private void registerKeybind() {
-        toggleKeybind = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "armor alert toggle",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_L,
-                "adv"
-        ));
     }
 
     private void onClientTick(MinecraftClient client) {
         if (client.player == null) return;
 
-        while (toggleKeybind.wasPressed()) {
+        while (KeyBinds.getToggleDurabilityAlerts().wasPressed()) {
             enabled = !enabled;
-            SettingsManager.getToggleSettings().put("Armor Durability Alerts", enabled); // Add this
+            SettingsManager.getToggleSettings().put("Armor Durability Alerts", enabled);
             SettingsManager.saveSettings();
             client.player.sendMessage(Text.of(enabled ? "§aDurability alerts enabled" : "§cDurability alerts disabled"), true);
         }

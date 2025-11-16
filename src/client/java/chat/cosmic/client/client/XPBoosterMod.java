@@ -212,6 +212,9 @@ public class XPBoosterMod implements ClientModInitializer {
         if (force) boosterContainers.keySet().forEach(k -> vis.putIfAbsent(k, 0));
         if (force || enderPearlCooldown > 0) vis.put(ENDER_PEARL_KEY, enderPearlCooldown);
 
+        // Import and add boss bar containers
+
+
         if (vis.isEmpty()) return;
 
         boolean needsCenter = !force && boosterContainers.values().stream().anyMatch(c -> c.x == 0);
@@ -230,6 +233,7 @@ public class XPBoosterMod implements ClientModInitializer {
 
         int maxX = sw - iconSz - 5, minY = 5, maxY = sh - iconSz * 2 - 5;
 
+        // Render booster items (existing code)
         for (var e : vis.entrySet()) {
             String key = e.getKey();
 

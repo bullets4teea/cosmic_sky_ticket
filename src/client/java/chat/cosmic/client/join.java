@@ -1,5 +1,6 @@
 package chat.cosmic.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import chat.cosmic.client.client.SettingsManager;
 import chat.cosmic.client.client.UniversalGuiMover;
 import net.fabricmc.api.ClientModInitializer;
@@ -9,18 +10,14 @@ import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.network.PlayerListEntry;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.text.Text;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.arguments.IntegerArgumentType;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -39,8 +36,6 @@ public class join implements ClientModInitializer {
     public static Map<String, String> playerColors = new HashMap<>();
     public static int MAX_PLAYERS_PER_COLUMN = 15;
 
-    public static KeyBinding toggleNotificationsKey;
-    public static KeyBinding toggleGuiKey;
     private static final UniversalGuiMover.HudContainer hudContainer = new UniversalGuiMover.HudContainer(10, 10, 100, 40, 1);
     private static final File configFile = new File("config/untitled20_mod.properties");
 
@@ -48,28 +43,18 @@ public class join implements ClientModInitializer {
     private static long dimensionChangeTime = 0;
     private static final long DIMENSION_CHANGE_COOLDOWN = 5000;
     private static String currentDimension = "";
+    private static boolean hasShownInitialList = false;
 
     @Override
     public void onInitializeClient() {
+        SettingsManager.initialize();
+        KeyBinds.registerKeyBinds();
+
         UniversalGuiMover.trackHudContainer("playerListHud", hudContainer);
         loadConfig();
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> saveConfig());
 
-        toggleNotificationsKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "toggle join server notifications",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_F,
-                "adv"
-        ));
-        toggleGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "toggle play list on server gui",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_G,
-                "adv"
-        ));
-
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
-            // Fixed command registration
             dispatcher.register(ClientCommandManager.literal("player")
                     .then(ClientCommandManager.literal("list")
                             .then(ClientCommandManager.literal("ignore")
@@ -163,17 +148,17 @@ public class join implements ClientModInitializer {
     private void onClientTick(MinecraftClient client) {
         if (client.player == null) return;
 
-        if (toggleNotificationsKey.wasPressed()) {
+        if (KeyBinds.getToggleNotifications().wasPressed()) {
             NOTIFICATIONS_ENABLED = !NOTIFICATIONS_ENABLED;
-            SettingsManager.getToggleSettings().put("Show Notifications", NOTIFICATIONS_ENABLED); // Add this
-            SettingsManager.saveSettings(); // Add this
+            SettingsManager.getToggleSettings().put("Show Notifications", NOTIFICATIONS_ENABLED);
+            SettingsManager.saveSettings();
             client.player.sendMessage(Text.of("Notifications " + (NOTIFICATIONS_ENABLED ? "enabled" : "disabled")), false);
         }
 
-        if (toggleGuiKey.wasPressed()) {
+        if (KeyBinds.getTogglePlayerList().wasPressed()) {
             GUI_VISIBLE = !GUI_VISIBLE;
-            SettingsManager.getToggleSettings().put("Show Player List", GUI_VISIBLE); // Add this
-            SettingsManager.saveSettings(); // Add this
+            SettingsManager.getToggleSettings().put("Show Player List", GUI_VISIBLE);
+            SettingsManager.saveSettings();
             client.player.sendMessage(Text.of("GUI " + (GUI_VISIBLE ? "enabled" : "disabled")), false);
         }
 
@@ -187,11 +172,11 @@ public class join implements ClientModInitializer {
         if (!newDimension.equals(currentDimension) && !currentDimension.isEmpty()) {
             isChangingDimension = true;
             dimensionChangeTime = System.currentTimeMillis();
-            onlinePlayers.clear(); // Reset player tracking on dimension change
+            onlinePlayers.clear();
+            hasShownInitialList = false;
         }
         currentDimension = newDimension;
 
-        // Simplified dimension change cooldown
         if (isChangingDimension && (System.currentTimeMillis() - dimensionChangeTime > DIMENSION_CHANGE_COOLDOWN)) {
             isChangingDimension = false;
         }
@@ -208,7 +193,12 @@ public class join implements ClientModInitializer {
             }
         }
 
-        if (!isFirstConnect && NOTIFICATIONS_ENABLED) {
+        if (NOTIFICATIONS_ENABLED && !hasShownInitialList && !currentPlayers.isEmpty()) {
+            showInitialPlayerList(client, currentPlayers);
+            hasShownInitialList = true;
+        }
+
+        if (NOTIFICATIONS_ENABLED && !isFirstConnect) {
             for (String player : currentPlayers) {
                 if (!onlinePlayers.contains(player)) {
                     client.player.sendMessage(Text.of("------------------------------------------"), false);
@@ -227,6 +217,48 @@ public class join implements ClientModInitializer {
         }
 
         onlinePlayers = currentPlayers;
+    }
+
+    private void showInitialPlayerList(MinecraftClient client, Set<String> players) {
+        if (players.isEmpty()) return;
+
+        List<String> playerList = new ArrayList<>(players);
+        Collections.sort(playerList);
+
+        StringBuilder playerNames = new StringBuilder();
+        for (int i = 0; i < playerList.size(); i++) {
+            String player = playerList.get(i);
+            String color = playerColors.get(player.toLowerCase());
+
+            if (color != null) {
+                switch (color) {
+                    case "red":
+                        playerNames.append("§c");
+                        break;
+                    case "green":
+                        playerNames.append("§a");
+                        break;
+                    case "aqua":
+                        playerNames.append("§b");
+                        break;
+                    default:
+                        playerNames.append("§f");
+                        break;
+                }
+            } else {
+                playerNames.append("§f");
+            }
+
+            playerNames.append(player);
+
+            if (i < playerList.size() - 1) {
+                playerNames.append("§7, ");
+            }
+        }
+
+        client.player.sendMessage(Text.of("§e§lPlayers in your world are: "), false);
+        client.player.sendMessage(Text.literal(playerNames.toString()), false);
+        client.player.sendMessage(Text.literal("§e§lTotal: " + players.size() + " player(s)"), false);
     }
 
     private void onHudRender(DrawContext context, float tickDelta) {
@@ -260,7 +292,6 @@ public class join implements ClientModInitializer {
                     0, -lineHeight, 0xFFFFFF, true
             );
 
-
             List<String> sortedPlayers = new ArrayList<>(displayPlayers);
             sortedPlayers.sort((a, b) -> {
                 String colorA = playerColors.getOrDefault(a.toLowerCase(), "default");
@@ -269,7 +300,6 @@ public class join implements ClientModInitializer {
                 int priorityB = getColorPriority(colorB);
                 return priorityA != priorityB ? Integer.compare(priorityB, priorityA) : a.compareToIgnoreCase(b);
             });
-
 
             List<String> commandPlayers = new ArrayList<>();
             List<String> otherPlayers = new ArrayList<>();
@@ -284,7 +314,6 @@ public class join implements ClientModInitializer {
 
             int commandColumns = (int) Math.ceil((double) commandPlayers.size() / maxPlayersPerColumn);
             int otherColumns = (int) Math.ceil((double) otherPlayers.size() / maxPlayersPerColumn);
-
 
             for (int col = 0; col < commandColumns; col++) {
                 int columnX = col * columnWidth;
@@ -306,14 +335,12 @@ public class join implements ClientModInitializer {
                 }
             }
 
-
             for (int col = 0; col < otherColumns; col++) {
                 int columnX = (commandColumns + col) * columnWidth;
                 for (int row = 0; row < maxPlayersPerColumn; row++) {
                     int index = col * maxPlayersPerColumn + row;
                     if (index >= otherPlayers.size()) break;
                     String player = otherPlayers.get(index);
-
 
                     int slotPosition = col * maxPlayersPerColumn + row;
                     int textColor = getSlotBasedGradientColor(slotPosition);
@@ -331,14 +358,6 @@ public class join implements ClientModInitializer {
 
             context.getMatrices().pop();
         }
-    }
-
-    private PlayerEntity findPlayerEntity(String username) {
-        if (MinecraftClient.getInstance().world == null) return null;
-        return MinecraftClient.getInstance().world.getPlayers().stream()
-                .filter(p -> p.getName().getString().equalsIgnoreCase(username))
-                .findFirst()
-                .orElse(null);
     }
 
     private int getColorPriority(String color) {
@@ -359,47 +378,37 @@ public class join implements ClientModInitializer {
         };
     }
 
-
     private int getSlotBasedGradientColor(int slotPosition) {
-
         float cyclePosition = (slotPosition % 24) / 24.0f;
-
-
         int r, g, b;
 
         if (cyclePosition < 0.2f) {
-            // Cyan to Blue
             float progress = cyclePosition / 0.2f;
             r = (int) (0x00 + (0x00 - 0x00) * progress);
             g = (int) (0xFF + (0x80 - 0xFF) * progress);
             b = (int) (0xFF + (0xFF - 0xFF) * progress);
         } else if (cyclePosition < 0.4f) {
-            // Blue to Purple
             float progress = (cyclePosition - 0.2f) / 0.2f;
             r = (int) (0x00 + (0x80 - 0x00) * progress);
             g = (int) (0x80 + (0x00 - 0x80) * progress);
             b = 0xFF;
         } else if (cyclePosition < 0.6f) {
-            // Purple to Red
             float progress = (cyclePosition - 0.4f) / 0.2f;
             r = (int) (0x80 + (0xFF - 0x80) * progress);
             g = 0x00;
             b = (int) (0xFF + (0x00 - 0xFF) * progress);
         } else if (cyclePosition < 0.8f) {
-            // Red to Orange
             float progress = (cyclePosition - 0.6f) / 0.2f;
             r = 0xFF;
             g = (int) (0x00 + (0x80 - 0x00) * progress);
             b = 0x00;
         } else {
-            // Orange to Yellow-Green
             float progress = (cyclePosition - 0.8f) / 0.2f;
             r = (int) (0xFF + (0x80 - 0xFF) * progress);
             g = (int) (0x80 + (0xFF - 0x80) * progress);
             b = (int) (0x00 + (0x40 - 0x00) * progress);
         }
 
-        // Ensure values are in valid range
         r = Math.max(0, Math.min(255, r));
         g = Math.max(0, Math.min(255, g));
         b = Math.max(0, Math.min(255, b));
@@ -412,9 +421,11 @@ public class join implements ClientModInitializer {
     }
 
     private boolean isValidPlayer(String username) {
-        return !username.startsWith("slot_") &&
-                !username.startsWith("minecraft:") &&
-                username.matches("[a-zA-Z0-9_]+"); // Fixed validation
+        if (username.matches("slot_[1-9]|slot_[1-9][0-9]|slot_100")) {
+            return false;
+        }
+        return !username.startsWith("minecraft:") &&
+                username.matches("[a-zA-Z0-9_]+");
     }
 
     private void toggleIgnoredPlayer(String username) {
@@ -446,14 +457,12 @@ public class join implements ClientModInitializer {
                 String ignored = props.getProperty("ignored_players", "");
                 if (!ignored.isEmpty()) ignoredPlayers.addAll(Arrays.asList(ignored.split(",")));
 
-
                 String colors = props.getProperty("player_colors", "");
                 for (String entry : colors.split(",")) {
                     if (entry.isEmpty()) continue;
                     String[] parts = entry.split(":");
                     if (parts.length == 2) {
                         String color = parts[1];
-
                         if (color.equals("red") || color.equals("green") || color.equals("aqua")) {
                             playerColors.put(parts[0].toLowerCase(), color);
                         }
@@ -471,7 +480,6 @@ public class join implements ClientModInitializer {
         props.setProperty("gui_visible", String.valueOf(GUI_VISIBLE));
         props.setProperty("max_players_per_column", String.valueOf(MAX_PLAYERS_PER_COLUMN));
         props.setProperty("ignored_players", String.join(",", ignoredPlayers));
-
 
         StringBuilder colors = new StringBuilder();
         playerColors.forEach((k, v) -> {

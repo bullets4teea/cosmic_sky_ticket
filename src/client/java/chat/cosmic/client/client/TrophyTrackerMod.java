@@ -1,5 +1,6 @@
 package chat.cosmic.client.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import com.mojang.brigadier.CommandDispatcher;
 import com.mojang.brigadier.arguments.StringArgumentType;
 import com.mojang.brigadier.context.CommandContext;
@@ -8,10 +9,7 @@ import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.command.v2.FabricClientCommandSource;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.minecraft.client.MinecraftClient;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.lwjgl.glfw.GLFW;
@@ -33,25 +31,16 @@ public class TrophyTrackerMod implements ClientModInitializer {
 
     // Updated pattern to handle formatting codes and different message formats
     private static final Pattern TROPHY_PATTERN = Pattern.compile(
-            "(?:§[0-9a-fk-or])*\\+ (\\d+) (?:§[0-9a-fk-or])*Trophy Points? \\(([^)]+)\\)(?:§[0-9a-fk-or])*",
+            "(\\d+) Trophy Points? \\(([^)]+\\))",
             Pattern.CASE_INSENSITIVE
     );
-
-    private static KeyBinding openGuiKey;
 
     @Override
     public void onInitializeClient() {
         System.out.println("TrophyTracker client mod initialized!");
 
-        openGuiKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "trophytracker",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_P,
-                "Island"
-        ));
-
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (openGuiKey.wasPressed()) {
+            while (KeyBinds.TrophyTracker_hud.wasPressed()) {
                 openTrophyGui();
             }
         });
@@ -86,34 +75,17 @@ public class TrophyTrackerMod implements ClientModInitializer {
     }
 
     public static void processTrophyMessage(String message) {
-        System.out.println("Processing message: " + message);
-
-        // Remove formatting codes for easier pattern matching
         String cleanMessage = removeFormattingCodes(message);
-        System.out.println("Clean message: " + cleanMessage);
 
         Matcher matcher = TROPHY_PATTERN.matcher(cleanMessage);
 
         if (matcher.find()) {
-            System.out.println("Trophy message detected!");
             int points = Integer.parseInt(matcher.group(1));
             String type = matcher.group(2);
 
-            // Clean up the type (remove any remaining formatting)
             type = removeFormattingCodes(type).trim();
 
             addTrophyPoints(type, points);
-
-            MinecraftClient client = MinecraftClient.getInstance();
-            if (client.player != null) {
-                client.player.sendMessage(Text.literal("✓ Tracked: +" + points + " " + type + " Trophy Points!")
-                        .formatted(Formatting.GREEN), false);
-            }
-        } else {
-            System.out.println("No trophy pattern match found.");
-
-            // Try alternative patterns if the main one fails
-            tryAlternativePatterns(cleanMessage);
         }
     }
 
@@ -127,42 +99,7 @@ public class TrophyTrackerMod implements ClientModInitializer {
     /**
      * Try alternative patterns for trophy detection
      */
-    private static void tryAlternativePatterns(String message) {
-        // Pattern 1: Just look for numbers followed by "Trophy Points"
-        Pattern altPattern1 = Pattern.compile("(\\d+) Trophy Points? \\(([^)]+)\\)", Pattern.CASE_INSENSITIVE);
-        Matcher matcher1 = altPattern1.matcher(message);
 
-        if (matcher1.find()) {
-            System.out.println("Alternative pattern 1 matched!");
-            int points = Integer.parseInt(matcher1.group(1));
-            String type = removeFormattingCodes(matcher1.group(2)).trim();
-            addTrophyPoints(type, points);
-            return;
-        }
-
-        // Pattern 2: Look for "+ number Trophy Points"
-        Pattern altPattern2 = Pattern.compile("\\+ (\\d+) Trophy Points? \\(([^)]+)\\)", Pattern.CASE_INSENSITIVE);
-        Matcher matcher2 = altPattern2.matcher(message);
-
-        if (matcher2.find()) {
-            System.out.println("Alternative pattern 2 matched!");
-            int points = Integer.parseInt(matcher2.group(1));
-            String type = removeFormattingCodes(matcher2.group(2)).trim();
-            addTrophyPoints(type, points);
-            return;
-        }
-
-        // Pattern 3: Just look for any number and "Trophy" in the message
-        Pattern altPattern3 = Pattern.compile("(\\d+).*Trophy.*\\(([^)]+)\\)", Pattern.CASE_INSENSITIVE);
-        Matcher matcher3 = altPattern3.matcher(message);
-
-        if (matcher3.find()) {
-            System.out.println("Alternative pattern 3 matched!");
-            int points = Integer.parseInt(matcher3.group(1));
-            String type = removeFormattingCodes(matcher3.group(2)).trim();
-            addTrophyPoints(type, points);
-        }
-    }
 
     private int checkTrophies(CommandContext<FabricClientCommandSource> context) {
         if (playerTrophies.isEmpty()) {
@@ -212,9 +149,6 @@ public class TrophyTrackerMod implements ClientModInitializer {
         playerTrophies.merge(type, points, Integer::sum);
         totalPoints += points;
 
-        // Debug output
-        System.out.println("Added " + points + " points for " + type);
-        System.out.println("Total points: " + totalPoints);
     }
 
     public static int getTotalPoints() {

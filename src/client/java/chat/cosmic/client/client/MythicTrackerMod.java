@@ -1,17 +1,15 @@
 package chat.cosmic.client.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandManager;
 import net.fabricmc.fabric.api.client.command.v2.ClientCommandRegistrationCallback;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.message.v1.ClientReceiveMessageEvents;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.option.KeyBinding;
 import net.minecraft.client.sound.PositionedSoundInstance;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerEntity;
 import net.minecraft.item.FishingRodItem;
 import net.minecraft.item.ItemStack;
@@ -20,7 +18,6 @@ import net.minecraft.registry.Registry;
 import net.minecraft.sound.SoundEvent;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
-import org.lwjgl.glfw.GLFW;
 
 import java.io.*;
 import java.util.Properties;
@@ -36,10 +33,8 @@ public class MythicTrackerMod implements ClientModInitializer {
     private static int SUNKENGEMSCount = 0;
     private static int skullCount = 0;
     public static boolean isHudVisible = true;
-    public static KeyBinding toggleHudKey; // Changed to public
     private static boolean wasToggleKeyPressed = false;
     private static final String CONFIG_FILE = "config/mythictracker.properties";
-
 
     public static final Identifier MYTHIC_SOUND_ID = new Identifier("mythictracker", "mythic_sound");
     public static final Identifier GODLY_SOUND_ID = new Identifier("mythictracker", "godly_sound");
@@ -64,15 +59,6 @@ public class MythicTrackerMod implements ClientModInitializer {
         );
         UniversalGuiMover.trackHudContainer("mythicTrackerHud", hudContainer);
 
-
-        toggleHudKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Fishing Hud Toggle",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_F13,
-                "Island"
-        ));
-
-
         ClientCommandRegistrationCallback.EVENT.register((dispatcher, registryAccess) -> {
             dispatcher.register(
                     ClientCommandManager.literal("fish")
@@ -94,11 +80,11 @@ public class MythicTrackerMod implements ClientModInitializer {
         });
 
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            boolean isTogglePressed = toggleHudKey.isPressed();
+            boolean isTogglePressed = KeyBinds.getToggleFishingHud().isPressed();
             if (isTogglePressed && !wasToggleKeyPressed) {
                 isHudVisible = !isHudVisible;
-                SettingsManager.getToggleSettings().put("Mythic Fishing HUD", isHudVisible); // Add this
-                SettingsManager.saveSettings(); // Add this
+                SettingsManager.getToggleSettings().put("Mythic Fishing HUD", isHudVisible);
+                SettingsManager.saveSettings();
                 saveConfig();
             }
             wasToggleKeyPressed = isTogglePressed;
@@ -108,11 +94,10 @@ public class MythicTrackerMod implements ClientModInitializer {
             String msg = message.getString();
             MinecraftClient client = MinecraftClient.getInstance();
 
-            // Skip if the message is from a player (contains "->" or "[Player]")
-            boolean isPlayerMessage = msg.contains("->") || msg.matches(".*\\[.*\\].*"); // Checks for brackets like [Player]
+            boolean isPlayerMessage = msg.contains("->") || msg.matches(".*\\[.*\\].*");
             boolean isServerMessage = !isPlayerMessage;
 
-            if (isServerMessage || overlay) { // Allow overlay (action bar) or non-player messages
+            if (isServerMessage || overlay) {
                 if (msg.contains("Mythic Treasure")) {
                     mythicCount++;
                     playSound(client, MYTHIC_SOUND);

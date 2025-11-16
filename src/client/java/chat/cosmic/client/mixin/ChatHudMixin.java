@@ -11,15 +11,16 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(ChatHud.class)
 public class ChatHudMixin {
 
-    // Filter chat messages for announcements
+
     @Inject(method = "addMessage(Lnet/minecraft/text/Text;)V", at = @At("HEAD"), cancellable = true)
     private void filterAnnouncements(Text message, CallbackInfo ci) {
         if (AnnouncementHiderClient.hideAnnouncements) {
             String messageText = message.getString().toLowerCase();
 
-            // Hide any message containing "new island quest"
+
             if (messageText.contains("new island quest")) {
                 ci.cancel();
+
             }
         }
     }

@@ -22,7 +22,7 @@ public class Trade2Client implements ClientModInitializer {
                 handleShiftRightClick(client);
             }
 
-            wereKeysPressed = areKeysPressed; // Update state
+            wereKeysPressed = areKeysPressed;
         });
     }
 

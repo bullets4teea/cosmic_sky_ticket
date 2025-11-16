@@ -1,11 +1,8 @@
 package chat.cosmic.client.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
-import org.lwjgl.glfw.GLFW;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -13,7 +10,6 @@ import java.nio.file.Paths;
 import java.util.Properties;
 
 public class HighlightSearchMod implements ClientModInitializer {
-    public static KeyBinding TOGGLE_SEARCH_KEY;
     public static boolean isSearchVisible = true;
     private static final Path CONFIG_PATH = Paths.get("config", "highlight_search.properties");
 
@@ -21,17 +17,10 @@ public class HighlightSearchMod implements ClientModInitializer {
     public void onInitializeClient() {
         loadConfig();
 
-        TOGGLE_SEARCH_KEY = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "toggle search",
-                InputUtil.Type.KEYSYM,
-                GLFW.GLFW_KEY_F13,
-                "Island"
-        ));
-
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (TOGGLE_SEARCH_KEY.wasPressed()) {
+            while (KeyBinds.getToggleSearch().wasPressed()) {
                 isSearchVisible = !isSearchVisible;
-                SettingsManager.getToggleSettings().put("Highlight Search", isSearchVisible);
+                SettingsManager.getToggleSettings().put("Search Bar", isSearchVisible);
                 SettingsManager.saveSettings();
                 saveConfig();
             }

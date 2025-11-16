@@ -1,19 +1,15 @@
-// TrinketMod.java
 package chat.cosmic.client.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.fabricmc.api.ModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.entity.player.PlayerInventory;
 import net.minecraft.item.ItemStack;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import org.lwjgl.glfw.GLFW;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -31,7 +27,6 @@ public class TrinketMod implements ModInitializer {
     private static final Path CONFIG_PATH = Paths.get("config", "trinket_display.properties");
     private UniversalGuiMover.HudContainer hudContainer;
     private boolean hudVisible = true;
-    private KeyBinding toggleKey;
     private static boolean modEnabled = true;
     private static boolean hudEnabled = true;
 
@@ -62,17 +57,8 @@ public class TrinketMod implements ModInitializer {
         hudContainer = new UniversalGuiMover.HudContainer(10, 10, 150, 12, 1);
         UniversalGuiMover.trackHudContainer(HUD_ID, hudContainer);
 
-        toggleKey = KeyBindingHelper.registerKeyBinding(
-                new KeyBinding(
-                        "Trinket toggle",
-                        InputUtil.Type.KEYSYM,
-                        GLFW.GLFW_KEY_T,
-                        "adv"
-                )
-        );
-
         ClientTickEvents.END_CLIENT_TICK.register(client -> {
-            while (toggleKey.wasPressed()) {
+            while (KeyBinds.getToggleTrinketHud().wasPressed()) {
                 hudVisible = !hudVisible;
                 SettingsManager.getToggleSettings().put("Trinket Display HUD", hudVisible);
                 SettingsManager.saveSettings();

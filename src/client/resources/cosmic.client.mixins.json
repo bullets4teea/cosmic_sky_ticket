@@ -5,6 +5,7 @@
   "mixins": [],
   "client": [
     "ArmorFeatureRendererMixin",
+    "BossBarHudMixin",
     "ChatHudMixin",
     "EntityMixin",
     "HandledScreenMixin",
@@ -12,7 +13,8 @@
     "InventorySlotMixin",
     "LivingEntityRendererMixin",
     "MixinClientPlayerInteractionManager",
-    "TrophyMessageMixin"
+    "TrophyMessageMixin",
+    "XPWithdrawMixin"
   ],
   "injectors": {
     "defaultRequire": 1

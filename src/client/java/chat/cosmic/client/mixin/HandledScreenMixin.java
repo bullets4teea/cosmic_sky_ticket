@@ -183,12 +183,7 @@ public abstract class HandledScreenMixin extends Screen {
             if (keyCode == GLFW.GLFW_KEY_E) {
                 cir.setReturnValue(true);
             }
-            return;
-        }
 
-        if (keyCode == GLFW.GLFW_KEY_R) {
-            HighlightSearchMod.isSearchVisible = !HighlightSearchMod.isSearchVisible;
-            cir.setReturnValue(true);
         }
     }
 }

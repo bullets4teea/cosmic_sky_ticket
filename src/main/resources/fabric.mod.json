@@ -23,7 +23,6 @@
       "chat.cosmic.client.client.ChestTrackerMod",
       "chat.cosmic.client.join",
       "chat.cosmic.client.client.HighlightSearchMod",
-      "chat.cosmic.client.client.MythicTrackerMod",
       "chat.cosmic.client.Trade2Client",
       "chat.cosmic.client.client.UniversalGuiMover",
       "chat.cosmic.client.client.NumberOverlayMod",
@@ -31,16 +30,17 @@
       "chat.cosmic.client.client.ArmorToggleMod",
       "chat.cosmic.client.client.CalculatorMod",
       "chat.cosmic.client.client.AnnouncementHiderClient",
-      "chat.cosmic.client.client.TrophyTrackerMod"
+      "chat.cosmic.client.client.TrophyTrackerMod",
+      "chat.cosmic.client.client.globe_booster.ProgressBarToggleMod",
+      "chat.cosmic.client.client.xpwithdraw",
+      "chat.cosmic.client.client.playerheadcooldown.PlayerHeadCooldownMod"
 
     ]
   },
   "mixins": [
-    "cosmic.mixins.json",
-    {
-      "config": "cosmic.client.mixins.json",
-      "environment": "client"
-    }
+    "cosmic.client.mixins.json",
+    "client.playerheadcooldown.mixins.json"
+
   ],
   "depends": {
     "fabricloader": ">=${loader_version}",

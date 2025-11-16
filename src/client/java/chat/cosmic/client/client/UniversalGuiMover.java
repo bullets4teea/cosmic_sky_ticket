@@ -1,16 +1,14 @@
-// UniversalGuiMover.java
+
 package chat.cosmic.client.client;
 
+import chat.cosmic.client.client.KeyBinds.KeyBinds;
 import net.fabricmc.api.ClientModInitializer;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientLifecycleEvents;
 import net.fabricmc.fabric.api.client.event.lifecycle.v1.ClientTickEvents;
-import net.fabricmc.fabric.api.client.keybinding.v1.KeyBindingHelper;
 import net.fabricmc.fabric.api.client.rendering.v1.HudRenderCallback;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.client.gui.DrawContext;
 import net.minecraft.client.gui.screen.Screen;
-import net.minecraft.client.option.KeyBinding;
-import net.minecraft.client.util.InputUtil;
 import net.minecraft.client.util.Window;
 import net.minecraft.text.Text;
 import org.lwjgl.glfw.GLFW;
@@ -24,8 +22,7 @@ import java.util.Map;
 import java.util.Properties;
 
 public class UniversalGuiMover implements ClientModInitializer {
-    public static KeyBinding moveGuisKey;
-    public static KeyBinding scaleUpKey, scaleDownKey;
+
 
     private static boolean isMovementMode = false;
     private static HudContainer draggedContainer = null;
@@ -58,15 +55,15 @@ public class UniversalGuiMover implements ClientModInitializer {
                 return true;
             }
 
-            if (UniversalGuiMover.moveGuisKey.matchesKey(keyCode, scanCode)) {
+            if (KeyBinds.getToggleGUIMovement().matchesKey(keyCode, scanCode)) {
                 toggleMovementMode(MinecraftClient.getInstance());
                 return true;
             }
-            if (UniversalGuiMover.scaleUpKey.matchesKey(keyCode, scanCode)) {
+            if (KeyBinds.getScaleUp().matchesKey(keyCode, scanCode)) {
                 updateScale(0.1f, MinecraftClient.getInstance());
                 return true;
             }
-            if (UniversalGuiMover.scaleDownKey.matchesKey(keyCode, scanCode)) {
+            if (KeyBinds.getScaleDown().matchesKey(keyCode, scanCode)) {
                 updateScale(-0.1f, MinecraftClient.getInstance());
                 return true;
             }
@@ -100,6 +97,17 @@ public class UniversalGuiMover implements ClientModInitializer {
 
         SettingsManager.initialize();
         trackHudContainer("settings_button", settingsButton);
+
+
+        initializeBossBarTracking();
+    }
+
+    private static void initializeBossBarTracking() {
+        try {
+
+        } catch (Exception e) {
+            System.err.println("Failed to initialize boss bar tracking: " + e.getMessage());
+        }
     }
 
     private void onClientTick(MinecraftClient client) {
@@ -132,14 +140,14 @@ public class UniversalGuiMover implements ClientModInitializer {
             settingsButton.y = 5;
         }
 
-        if (scaleUpKey.wasPressed()) {
+        if (KeyBinds.getScaleUp().wasPressed()) {
             updateScale(0.1f, client);
         }
-        if (scaleDownKey.wasPressed()) {
+        if (KeyBinds.getScaleDown().wasPressed()) {
             updateScale(-0.1f, client);
         }
 
-        if (moveGuisKey.wasPressed() && client.currentScreen == null) {
+        if (KeyBinds.getToggleGUIMovement().wasPressed() && client.currentScreen == null) {
             toggleMovementMode(client);
         }
     }
@@ -221,14 +229,7 @@ public class UniversalGuiMover implements ClientModInitializer {
     }
 
     private void setupKeybinds() {
-        moveGuisKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Move GUIs", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_Y, "Universal GUI Mover"));
 
-        scaleUpKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Scale Up", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_EQUAL, "Universal GUI Mover"));
-
-        scaleDownKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
-                "Scale Down", InputUtil.Type.KEYSYM, GLFW.GLFW_KEY_MINUS, "Universal GUI Mover"));
     }
 
     public static void handleKeyPress(int key, int scancode, int action, int modifiers) {
@@ -295,6 +296,11 @@ public class UniversalGuiMover implements ClientModInitializer {
         Map<String, Boolean> toggleSettings = SettingsManager.getToggleSettings();
         Map<String, Boolean> boosterToggleSettings = SettingsManager.getBoosterToggleSettings();
 
+        // Check if it's a boss bar
+        if ("Marauder Bar".equals(containerId) || "Island Quest Bar".equals(containerId)) {
+            return boosterToggleSettings.getOrDefault(containerId, true);
+        }
+
         // Special case for trinket display
         if ("trinket_display".equals(containerId)) {
             return toggleSettings.getOrDefault("Trinket Display HUD", true);
@@ -343,6 +349,10 @@ public class UniversalGuiMover implements ClientModInitializer {
             draggedContainer = null;
             dragging = false;
         }
+    }
+
+    public static Map<String, HudContainer> getHudContainers() {
+        return hudContainers;
     }
 
     private boolean isMouseOver(HudContainer container, double mouseX, double mouseY) {

@@ -105,9 +105,9 @@ public class SettingsRenderer {
 
         for (Map.Entry<String, Boolean> entry : SettingsManager.getToggleSettings().entrySet()) {
             String key = entry.getKey();
-            // Only skip other HUD settings, but show Trinket Display HUD
+
             if (key.contains("HUD") && !key.equals("Trinket Display HUD")) continue;
-            if (key.startsWith("Mob ")) continue; // Skip mob settings in main tab
+            if (key.startsWith("Mob ")) continue;
 
             String text = key + ": " + (entry.getValue() ? "ON" : "OFF");
             context.drawTextWithShadow(client.textRenderer, text, x + 10, optionY, 0xFFFFFF);
@@ -191,7 +191,7 @@ public class SettingsRenderer {
 
         Map<String, Boolean> allHudSettings = new LinkedHashMap<>();
 
-        allHudSettings.put("XP Booster HUD", SettingsManager.getToggleSettings().getOrDefault("XP Booster HUD", true));
+
         allHudSettings.put("Chest Tracker HUD", SettingsManager.getToggleSettings().getOrDefault("Chest Tracker HUD", true));
         allHudSettings.put("Curse HUD", SettingsManager.getToggleSettings().getOrDefault("Curse HUD", true));
         allHudSettings.put("Chaotic Zone HUD", SettingsManager.getToggleSettings().getOrDefault("Chaotic Zone HUD", true));
@@ -262,7 +262,7 @@ public class SettingsRenderer {
             boolean nametagVisible = SettingsManager.getToggleSettings().getOrDefault(nametagKey, true);
             boolean glowVisible = SettingsManager.getToggleSettings().getOrDefault(glowKey, true);
 
-            // Render tier name
+
             context.drawTextWithShadow(client.textRenderer, tierName + " Marauder:", x + 20, optionY, 0xFFFFFF);
             optionY += 12;
 
@@ -306,8 +306,8 @@ public class SettingsRenderer {
         }
     }
 
-    // KEYBIND TAB CODE - TEMPORARILY DISABLED BUT KEPT FOR FUTURE USE
-    // To re-enable: uncomment the KEYBINDS enum value above and the case in the switch statement
+
+    //
     /*
     private static void renderKeybindsTab(DrawContext context, MinecraftClient client, int x, int y, int width, int height) {
         int optionY = y + 10;
