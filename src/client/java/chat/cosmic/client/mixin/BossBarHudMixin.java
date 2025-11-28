@@ -221,7 +221,7 @@ public class BossBarHudMixin {
             ctx.drawText(client.textRenderer, multiplierText, -multiplierWidth / 2, 0, TEXT_COLOR, true);
             ctx.getMatrices().pop();
 
-            // Draw time
+
             ctx.getMatrices().push();
             ctx.getMatrices().translate(ICON_SIZE / 2f, yOffset + 20, 0);
             ctx.getMatrices().scale(TIMER_SCALE, TIMER_SCALE, 1);
@@ -272,7 +272,7 @@ public class BossBarHudMixin {
             while (start >= 0 && (Character.isDigit(text.charAt(start)) || text.charAt(start) == '.')) {
                 start--;
             }
-            start++; // Move back to the first digit
+            start++;
             return text.substring(start, xIndex + 1);
         }
         return "1x";

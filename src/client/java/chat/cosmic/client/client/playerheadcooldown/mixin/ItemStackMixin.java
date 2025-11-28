@@ -23,7 +23,7 @@ public class ItemStackMixin {
         if (PlayerHeadCooldownMod.isPet(stack)) {
             String petName = PlayerHeadCooldownMod.getPetName(stack);
 
-            // Check if pet is on cooldown
+
             if (PlayerHeadCooldownMod.isOnCooldown(stack)) {
                 if (world.isClient) {
                     long remaining = PlayerHeadCooldownMod.getRemainingCooldown(stack);
@@ -34,7 +34,7 @@ public class ItemStackMixin {
                 return;
             }
 
-            // Check if another pet of the same type is already active
+
             if (ActivePetEffectsHud.isPetTypeActive(petName)) {
                 if (world.isClient) {
                     user.sendMessage(Text.literal("§cYou already have an active " + petName + "! Wait for it to finish."), true);
@@ -43,8 +43,7 @@ public class ItemStackMixin {
                 return;
             }
 
-            // Let the server handle the activation - we'll detect it from chat messages
-            // This ensures the HUD works regardless of where the player is looking
+
         }
     }
 }

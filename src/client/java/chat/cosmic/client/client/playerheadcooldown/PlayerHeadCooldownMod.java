@@ -23,7 +23,7 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
 
     private static final Map<String, Long> itemCooldowns = new HashMap<>();
 
-    // Track recently activated pets to match with chat messages
+
     private static String lastActivatedPet = null;
     private static long lastActivationTime = 0;
 
@@ -43,12 +43,12 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
     }
 
     public static void handlePetActivationMessage(String petName) {
-        // Find the pet in the player's inventory that matches this name
+
         if (client.player == null) return;
 
-        System.out.println("Detected pet activation: " + petName); // Debug
+        System.out.println("Detected pet activation: " + petName);
 
-        // Look for the pet in the inventory
+
         ItemStack foundPet = null;
         int foundSlot = -1;
 
@@ -57,7 +57,7 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
             if (isPet(stack)) {
                 String stackPetName = getPetName(stack);
                 if (stackPetName != null && stackPetName.equals(petName)) {
-                    // Found the pet that was activated
+
                     foundPet = stack;
                     foundSlot = i;
                     break;
@@ -65,14 +65,14 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
             }
         }
 
-        // If exact match not found, try partial match
+
         if (foundPet == null) {
             for (int i = 0; i < client.player.getInventory().size(); i++) {
                 ItemStack stack = client.player.getInventory().getStack(i);
                 if (isPet(stack)) {
                     String stackPetName = getPetName(stack);
                     if (stackPetName != null && stackPetName.contains(petName.replace(" Pet", ""))) {
-                        // Found a partial match
+
                         foundPet = stack;
                         foundSlot = i;
                         break;
@@ -86,12 +86,12 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
             ActivePetEffectsHud.activatePetEffect(petName, petLevel, foundPet);
             ActivePetEffectsHud.initializePetHud();
 
-            // Start cooldown for this pet
+
             startCooldown(foundPet, foundSlot);
 
-            System.out.println("Activated HUD for: " + petName + " Level: " + petLevel); // Debug
+            System.out.println("Activated HUD for: " + petName + " Level: " + petLevel);
         } else {
-            System.out.println("Could not find pet in inventory: " + petName); // Debug
+            System.out.println("Could not find pet in inventory: " + petName);
         }
     }
 
@@ -102,20 +102,20 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
                 long cooldownDuration = PetManager.getCooldownDuration(pet);
                 itemCooldowns.put(persistentId, System.currentTimeMillis() + cooldownDuration);
 
-                // Update lastUsed in NBT
+
                 if (!pet.hasNbt()) {
                     pet.setNbt(new NbtCompound());
                 }
                 pet.getNbt().putLong("lastUsed", System.currentTimeMillis());
 
-                // Track this as the last activated pet
+
                 lastActivatedPet = getPetName(pet);
                 lastActivationTime = System.currentTimeMillis();
             }
         }
     }
 
-    // ... (rest of the PlayerHeadCooldownMod methods remain the same)
+
 
     public static boolean isOnCooldown(ItemStack stack) {
         if (PetManager.isPet(stack)) {
@@ -127,7 +127,7 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
                 }
             }
 
-            // Check lastUsed timestamp from NBT
+
             long lastUsed = getLastUsedTime(stack);
             if (lastUsed > 0) {
                 long cooldownDuration = PetManager.getCooldownDuration(stack);
@@ -148,7 +148,7 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
                 }
             }
 
-            // Check lastUsed timestamp from NBT
+
             long lastUsed = getLastUsedTime(stack);
             if (lastUsed > 0) {
                 long cooldownDuration = PetManager.getCooldownDuration(stack);
@@ -172,12 +172,12 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
 
         NbtCompound nbt = stack.getNbt();
 
-        // Try c_iid first (most reliable)
+
         if (nbt.contains("c_iid")) {
             return "c_iid_" + nbt.getLong("c_iid");
         }
 
-        // Try petType + SkullOwner combination
+
         if (nbt.contains("petType")) {
             String petType = nbt.getString("petType");
             String skullId = "unknown";
@@ -194,7 +194,7 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
             return skullId + "_" + petType;
         }
 
-        // Fallback to display name
+
         String petName = PetManager.getPetName(stack);
         if (petName != null) {
             return "name_" + petName + "_" + System.identityHashCode(stack);
@@ -216,9 +216,9 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
     public static void handleServerCooldownMessage(long remainingCooldownMs) {
         if (client.player == null) return;
 
-        // First, try to use the last activated pet
+
         if (lastActivatedPet != null && (System.currentTimeMillis() - lastActivationTime) < 5000) {
-            // Look for the recently activated pet
+
             for (int i = 0; i < client.player.getInventory().size(); i++) {
                 ItemStack stack = client.player.getInventory().getStack(i);
                 if (isPet(stack) && lastActivatedPet.equals(getPetName(stack))) {
@@ -228,7 +228,7 @@ public class PlayerHeadCooldownMod implements ClientModInitializer {
             }
         }
 
-        // Fallback: Check all inventory slots for pets that might have been used
+
         for (int i = 0; i < client.player.getInventory().size(); i++) {
             ItemStack stack = client.player.getInventory().getStack(i);
             if (PetManager.isPet(stack) && isOnCooldown(stack)) {
