@@ -17,14 +17,27 @@ public class ChatMessageMixin {
         String messageText = message.getString();
 
 
-        if (messageText.startsWith("PET:")) {
+        if (messageText.contains("Your blessing has prevented your pet's ability cooldown!")) {
 
+            int startIdx = messageText.indexOf('(');
+            int endIdx = messageText.indexOf(')');
+            if (startIdx != -1 && endIdx != -1 && endIdx > startIdx) {
+                String petAbilityName = messageText.substring(startIdx + 1, endIdx);
+                String petName = mapAbilityNameToPetName(petAbilityName);
+                if (petName != null) {
+                    PlayerHeadCooldownMod.cancelPetCooldown(petName);
+                    System.out.println("Blessing prevented cooldown for: " + petName);
+                }
+            }
+            return;
+        }
+
+        if (messageText.startsWith("PET:")) {
             String petName = extractPetNameFromMessage(messageText);
             if (petName != null) {
                 PlayerHeadCooldownMod.handlePetActivationMessage(petName);
             }
         }
-
 
         Matcher matcher = PlayerHeadCooldownMod.getCooldownPattern().matcher(messageText);
         if (matcher.find()) {
@@ -33,6 +46,27 @@ public class ChatMessageMixin {
             long totalCooldownMs = (minutes * 60L + seconds) * 1000L;
             PlayerHeadCooldownMod.handleServerCooldownMessage(totalCooldownMs);
         }
+    }
+    
+    private String mapAbilityNameToPetName(String abilityName) {
+
+        if (abilityName.contains("Man's Best Friend")) return "Dire Wolf Pet";
+        if (abilityName.contains("Mining Mastery")) return "Miner Matt Pet";
+        if (abilityName.contains("Harvest Helper")) return "Farmer Bob Pet";
+        if (abilityName.contains("Battle Fury")) return "Battle Pig Pet";
+        if (abilityName.contains("Slayer's Edge")) return "Slayer Sam Pet";
+        if (abilityName.contains("Chaos Strike")) return "Chaos Cow Pet";
+        if (abilityName.contains("Forge Master")) return "Blacksmith Brandon Pet";
+        if (abilityName.contains("Fishing Fortune")) return "Fisherman Fred Pet";
+        if (abilityName.contains("Potion Master")) return "Alchemist Alex Pet";
+        if (abilityName.contains("Blood Sacrifice")) return "Blood Sheep Pet";
+        if (abilityName.contains("Merchant's Luck")) return "Merchant Pet";
+        if (abilityName.contains("Void Teleport")) return "Void Chicken Pet";
+        if (abilityName.contains("Loot Multiplier")) return "Loot Llama Pet";
+        if (abilityName.contains("Bee Swarm")) return "Barry Bee Pet";
+        if (abilityName.contains("Quest Master")) return "Quester Quincy Pet";
+        
+        return null;
     }
 
     private String extractPetNameFromMessage(String message) {

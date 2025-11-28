@@ -43,7 +43,7 @@ public class ActivePetEffectsHud {
         petEffects.put("Void Chicken Pet", "Damage Boost");
         petEffects.put("Loot Llama Pet", "Extra Loot Drops");
         petEffects.put("Barry Bee Pet", "Bee hives in a 15 area will gain high chance for workers to gather an empty honeycomb");
-        petEffects.put("Farmer Bob Pet", "Multiply Farming Island Quest progress by 2x"); // Added Farmer Bob Pet
+        petEffects.put("Farmer Bob Pet", "Multiply Farming Island Quest progress by 2x");
 
 
         initializeEffectDurations();
@@ -306,10 +306,10 @@ public class ActivePetEffectsHud {
     }
 
     public static int getPetLevel(ItemStack stack) {
-        // Extract level from item name or NBT
+        
         if (stack.hasCustomName()) {
             String name = stack.getName().getString();
-            // Look for [LVL XX] pattern
+            
             java.util.regex.Pattern pattern = java.util.regex.Pattern.compile("\\[LVL (\\d+)\\]");
             java.util.regex.Matcher matcher = pattern.matcher(name);
             if (matcher.find()) {
@@ -332,7 +332,7 @@ public class ActivePetEffectsHud {
         public final String petName;
         public final int level;
         public final long endTime;
-        public final ItemStack petStack;  // Store the actual pet item
+        public final ItemStack petStack;
 
         public ActiveEffect(String petName, int level, long endTime, ItemStack petStack) {
             this.petName = petName;
