@@ -28,6 +28,8 @@ public class UniversalGuiMover implements ClientModInitializer {
     private static final Map<String, HudContainer> hudContainers = new HashMap<>();
     private static final String CONFIG_FILE = "config/untitled20_mod.properties";
     private static float globalTextScale = 1.0f;
+
+    private static Properties savedProps = new Properties();
     private static boolean dragging;
     private static int lastWindowWidth = 0;
     private static int lastWindowHeight = 0;
@@ -80,6 +82,8 @@ public class UniversalGuiMover implements ClientModInitializer {
 
     @Override
     public void onInitializeClient() {
+        loadGuiPositions();
+
         ClientLifecycleEvents.CLIENT_STOPPING.register(client -> {
             saveGuiPositions();
             SettingsManager.saveSettings();
@@ -220,6 +224,8 @@ public class UniversalGuiMover implements ClientModInitializer {
         try {
             if (Files.exists(Path.of(CONFIG_FILE))) {
                 props.load(Files.newInputStream(Path.of(CONFIG_FILE)));
+
+                savedProps = props;
                 loadGuiPositions(props);
             }
         } catch (IOException e) {
@@ -394,11 +400,18 @@ public class UniversalGuiMover implements ClientModInitializer {
     }
 
     public static void trackHudContainer(String id, HudContainer container) {
-        if (hudContainers.containsKey(id)) {
+        // If we loaded properties from disk earlier, prefer those values
+        if (savedProps != null && (savedProps.containsKey(id + ".x") || savedProps.containsKey(id + ".y"))) {
+            try {
+                if (savedProps.containsKey(id + ".x")) container.x = Integer.parseInt(savedProps.getProperty(id + ".x"));
+                if (savedProps.containsKey(id + ".y")) container.y = Integer.parseInt(savedProps.getProperty(id + ".y"));
+            } catch (NumberFormatException ignored) {}
+        } else if (hudContainers.containsKey(id)) {
             HudContainer saved = hudContainers.get(id);
             container.x = saved.x;
             container.y = saved.y;
         }
+
         hudContainers.put(id, container);
         clampPosition(container, MinecraftClient.getInstance().getWindow());
     }

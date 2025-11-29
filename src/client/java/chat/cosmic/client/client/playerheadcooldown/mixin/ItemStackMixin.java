@@ -24,6 +24,18 @@ public class ItemStackMixin {
             String petName = PlayerHeadCooldownMod.getPetName(stack);
 
 
+            int slot = -1;
+            if (hand == Hand.MAIN_HAND) {
+                slot = user.getInventory().selectedSlot;
+            } else {
+
+                slot = 40;
+            }
+
+
+            PlayerHeadCooldownMod.trackPetUsage(stack, slot);
+
+            // Check if pet is on cooldown
             if (PlayerHeadCooldownMod.isOnCooldown(stack)) {
                 if (world.isClient) {
                     long remaining = PlayerHeadCooldownMod.getRemainingCooldown(stack);
@@ -44,6 +56,9 @@ public class ItemStackMixin {
             }
 
 
+            if (world.isClient) {
+                PlayerHeadCooldownMod.startCooldown(stack, slot);
+            }
         }
     }
 }

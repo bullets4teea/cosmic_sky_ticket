@@ -43,7 +43,7 @@ public class ActivePetEffectsHud {
         petEffects.put("Void Chicken Pet", "Damage Boost");
         petEffects.put("Loot Llama Pet", "Extra Loot Drops");
         petEffects.put("Barry Bee Pet", "Bee hives in a 15 area will gain high chance for workers to gather an empty honeycomb");
-        petEffects.put("Farmer Bob Pet", "Multiply Farming Island Quest progress by 2x"); // Added Farmer Bob Pet
+        petEffects.put("Farmer Bob Pet", "Multiply Farming Island Quest progress by 2x");
 
 
         initializeEffectDurations();
@@ -228,7 +228,7 @@ public class ActivePetEffectsHud {
                 (int)((x + 25) / TEXT_SCALE),
                 (int)((y + 3) / TEXT_SCALE),
                 0xFFFFFF,
-                true);  // Shadow enabled
+                true);
         matrices.pop();
 
 
@@ -261,7 +261,7 @@ public class ActivePetEffectsHud {
     }
 
     private static void renderPetIcon(DrawContext context, ItemStack petStack, int x, int y) {
-        // Render the actual pet ItemStack (shows the player head texture with SkullOwner)
+
         if (petStack != null && !petStack.isEmpty()) {
             context.drawItem(petStack, x, y);
         } else {
@@ -317,7 +317,7 @@ public class ActivePetEffectsHud {
             }
         }
 
-        // Also check NBT for level
+
         if (stack.hasNbt()) {
             NbtCompound nbt = stack.getNbt();
             if (nbt.contains("level")) {
@@ -325,14 +325,14 @@ public class ActivePetEffectsHud {
             }
         }
 
-        return 1; // Default to level 1 if not found
+        return 1;
     }
 
     private static class ActiveEffect {
         public final String petName;
         public final int level;
         public final long endTime;
-        public final ItemStack petStack;  // Store the actual pet item
+        public final ItemStack petStack;
 
         public ActiveEffect(String petName, int level, long endTime, ItemStack petStack) {
             this.petName = petName;
